@@ -98,7 +98,22 @@ export class PythonLanguageGenerator implements LanguageGenerator {
           method = 'dblclick';
         const options = toClickOptionsForSourceCode(action);
         const optionsString = formatOptions(options, false);
-        return `${subject}.${this._asLocator(action.selector)}.${method}(${optionsString})`;
+
+        // Include targeting comments if targetInfo is available
+        let result = `${subject}.${this._asLocator(action.selector)}.${method}(${optionsString})`;
+        if (action.targetInfo) {
+          const { tagName, elementDimensions, relativePosition, elementAttributes, elementClasses } = action.targetInfo;
+          const comments = [];
+          comments.push(`# Clicked on ${tagName}${elementClasses ? ` with classes "${elementClasses}"` : ''}`);
+          if (elementDimensions)
+            comments.push(`# Element dimensions: ${elementDimensions.width}x${elementDimensions.height}`);
+          if (relativePosition)
+            comments.push(`# Click position relative to element: ${(relativePosition.x * 100).toFixed(1)}%, ${(relativePosition.y * 100).toFixed(1)}%`);
+          if (comments.length > 0)
+            result = comments.join('\n') + '\n' + result;
+        }
+
+        return result;
       }
       case 'check':
         return `${subject}.${this._asLocator(action.selector)}.check()`;

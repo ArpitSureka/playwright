@@ -250,7 +250,8 @@ class RecordActionTool implements RecorderTool {
           signals: [],
           button: buttonForEvent(event),
           modifiers: modifiersForEvent(event),
-          clickCount: event.detail
+          clickCount: event.detail,
+          targetInfo: getTargetInfo(event)
         },
         timeout: this._recorder.injectedScript.builtins.setTimeout(() => this._commitPendingClickAction(), 200)
       };
@@ -277,7 +278,8 @@ class RecordActionTool implements RecorderTool {
       signals: [],
       button: buttonForEvent(event),
       modifiers: modifiersForEvent(event),
-      clickCount: event.detail
+      clickCount: event.detail,
+      targetInfo: getTargetInfo(event)
     });
   }
 
@@ -311,7 +313,8 @@ class RecordActionTool implements RecorderTool {
       signals: [],
       button: 'right',
       modifiers: 0,
-      clickCount: 0
+      clickCount: 0,
+      targetInfo: getTargetInfo(event)
     });
   }
 
@@ -1445,13 +1448,42 @@ function buttonForEvent(event: MouseEvent): 'left' | 'middle' | 'right' {
   return 'left';
 }
 
-function positionForEvent(event: MouseEvent): Point |undefined {
+function positionForEvent(event: MouseEvent): Point | undefined {
   const targetElement = (event.target as HTMLElement);
-  if (targetElement.nodeName !== 'CANVAS')
+  if (!targetElement)
     return;
   return {
     x: event.offsetX,
     y: event.offsetY,
+  };
+}
+
+function getTargetInfo(event: MouseEvent): any {
+  const targetElement = (event.target as HTMLElement);
+  if (!targetElement)
+    return undefined;
+  
+  const rect = targetElement.getBoundingClientRect();
+  const attributes: Record<string, string> = {};
+  
+  // Collect attributes
+  for (let i = 0; i < targetElement.attributes.length; i++) {
+    const attr = targetElement.attributes[i];
+    attributes[attr.name] = attr.value;
+  }
+  
+  return {
+    tagName: targetElement.tagName,
+    elementDimensions: {
+      width: rect.width,
+      height: rect.height
+    },
+    relativePosition: {
+      x: rect.width ? (event.offsetX / rect.width) : 0,
+      y: rect.height ? (event.offsetY / rect.height) : 0
+    },
+    elementAttributes: attributes,
+    elementClasses: targetElement.className
   };
 }
 

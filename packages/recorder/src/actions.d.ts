@@ -48,6 +48,13 @@ export type ClickAction = ActionWithSelector & {
   modifiers: number,
   clickCount: number,
   position?: Point,
+  targetInfo?: {
+    tagName: string,
+    elementDimensions?: { width: number, height: number },
+    relativePosition?: { x: number, y: number },  // position relative to element (in percentage)
+    elementAttributes?: Record<string, string>,
+    elementClasses?: string
+  }
 };
 
 export type CheckAction = ActionWithSelector & {

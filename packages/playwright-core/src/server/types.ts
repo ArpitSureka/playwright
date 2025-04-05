@@ -117,11 +117,17 @@ export type DragActionOptions = {
   targetPosition?: Point;
 };
 
-
 export type MouseClickOptions = PointerActionOptions & {
   delay?: number;
   button?: MouseButton;
   clickCount?: number;
+  targetInfo?: {
+    tagName: string;
+    elementDimensions?: { width: number; height: number };
+    relativePosition?: { x: number; y: number };
+    elementAttributes?: Record<string, string>;
+    elementClasses?: string;
+  };
 };
 
 export type MouseMultiClickOptions = PointerActionOptions & {
