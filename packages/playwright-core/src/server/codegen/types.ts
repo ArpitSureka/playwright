@@ -32,7 +32,7 @@ export interface LanguageGenerator {
   groupName: string;
   name: string;
   highlighter: Language;
+  generateAction(actionInContext: actions.ActionInContext): Promise<string> | string;
   generateHeader(options: LanguageGeneratorOptions): string;
-  generateAction(actionInContext: actions.ActionInContext): string;
-  generateFooter(saveStorage: string | undefined): string;
+  generateFooter(saveStorage?: string): string;
 }

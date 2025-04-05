@@ -26,6 +26,7 @@ import { Frame } from '../frames';
 import { Page } from '../page';
 import { ThrottledFile } from './throttledFile';
 import { generateCode } from '../codegen/language';
+import { enhanceCompleteScript } from '../codegen/llmEnhancer';
 
 import type { RegisteredListener } from '../../utils';
 import type { Language, LanguageGenerator, LanguageGeneratorOptions } from '../codegen/types';
@@ -57,6 +58,8 @@ export class ContextRecorder extends EventEmitter {
   private _throttledOutputFile: ThrottledFile | null = null;
   private _orderedLanguages: LanguageGenerator[] = [];
   private _listeners: RegisteredListener[] = [];
+  private _currentActions: actions.ActionInContext[] = [];
+  private _enhanceFullScript: boolean = false;
 
   constructor(context: BrowserContext, params: channels.BrowserContextEnableRecorderParams, delegate: ContextRecorderDelegate) {
     super();
@@ -64,6 +67,7 @@ export class ContextRecorder extends EventEmitter {
     this._params = params;
     this._delegate = delegate;
     this._recorderSources = [];
+    this._enhanceFullScript = process.env.PW_ENHANCE_FULL_SCRIPT === '1';
     const language = params.language || context.attribution.playwright.options.sdkLanguage;
     this.setOutput(language, params.outputFile);
 
@@ -77,10 +81,11 @@ export class ContextRecorder extends EventEmitter {
     };
 
     this._collection = new RecorderCollection(this._pageAliases);
-    this._collection.on('change', (actions: actions.ActionInContext[]) => {
+    this._collection.on('change', async (actions: actions.ActionInContext[]) => {
+      this._currentActions = actions;
       this._recorderSources = [];
       for (const languageGenerator of this._orderedLanguages) {
-        const { header, footer, actionTexts, text } = generateCode(actions, languageGenerator, languageGeneratorOptions);
+        const { header, footer, actionTexts, text } = await generateCode(actions, languageGenerator, languageGeneratorOptions);
         const source: Source = {
           isRecorded: true,
           label: languageGenerator.name,
@@ -160,7 +165,7 @@ export class ContextRecorder extends EventEmitter {
   private async _onPage(page: Page) {
     // First page is called page, others are called popup1, popup2, etc.
     const frame = page.mainFrame();
-    page.on('close', () => {
+    page.on('close', async () => {
       this._collection.addRecordedAction({
         frame: this._describeMainFrame(page),
         action: {
@@ -169,6 +174,34 @@ export class ContextRecorder extends EventEmitter {
         },
         startTime: monotonicTime()
       });
+      
+      // After adding the close action, enhance the full script if enabled
+      if (this._enhanceFullScript && this._throttledOutputFile && this._recorderSources.length > 0) {
+        try {
+          // Get the script text for the primary language (first in the ordered languages)
+          const primarySourceText = this._recorderSources[0].text;
+          
+          // Enhance the full script
+          console.log('Enhancing full script after page close...');
+          const enhancedScript = await enhanceCompleteScript(primarySourceText, this._currentActions);
+          
+          // Update the first source with the enhanced script
+          this._recorderSources[0].text = enhancedScript;
+          
+          // Update the output file
+          this._throttledOutputFile.setContent(enhancedScript);
+          this._throttledOutputFile.flush();
+          
+          // Emit change event with the updated sources
+          this.emit(ContextRecorder.Events.Change, {
+            sources: this._recorderSources,
+            actions: this._currentActions
+          });
+        } catch (error) {
+          console.error('Error while enhancing full script:', error);
+        }
+      }
+      
       this._pageAliases.delete(page);
     });
     frame.on(Frame.Events.InternalNavigation, event => {

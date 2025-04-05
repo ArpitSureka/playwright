@@ -17,6 +17,7 @@
 import { sanitizeDeviceOptions, toClickOptionsForSourceCode, toKeyboardModifiers, toSignalMap } from './language';
 import { asLocator, escapeWithQuotes } from '../../utils';
 import { deviceDescriptors } from '../deviceDescriptors';
+import { enhanceWithLLM } from './llmEnhancer';
 
 import type { Language, LanguageGenerator, LanguageGeneratorOptions } from './types';
 import type { BrowserContextOptions } from '../../../types/types';
@@ -28,14 +29,16 @@ export class JavaScriptLanguageGenerator implements LanguageGenerator {
   name: string;
   highlighter = 'javascript' as Language;
   private _isTest: boolean;
+  private _useEnhancer: boolean;
 
   constructor(isTest: boolean) {
     this.id = isTest ? 'playwright-test' : 'javascript';
-    this.name = isTest ? 'Test Runner' : 'Library';
+    this.name = isTest ? 'Test' : 'Library';
     this._isTest = isTest;
+    this._useEnhancer = process.env.PW_USE_LLM_ENHANCER === '1';
   }
 
-  generateAction(actionInContext: actions.ActionInContext): string {
+  async generateAction(actionInContext: actions.ActionInContext): Promise<string> {
     const action = actionInContext.action;
     if (this._isTest && (action.name === 'openPage' || action.name === 'closePage'))
       return '';
@@ -56,9 +59,9 @@ export class JavaScriptLanguageGenerator implements LanguageGenerator {
 
     if (signals.dialog) {
       formatter.add(`  ${pageAlias}.once('dialog', dialog => {
-    console.log(\`Dialog message: $\{dialog.message()}\`);
-    dialog.dismiss().catch(() => {});
-  });`);
+  console.log(\`Dialog message: $\{dialog.message()}\`);
+  dialog.dismiss().catch(() => {});
+});`);
     }
 
     if (signals.popup)
@@ -66,8 +69,19 @@ export class JavaScriptLanguageGenerator implements LanguageGenerator {
     if (signals.download)
       formatter.add(`const download${signals.download.downloadAlias}Promise = ${pageAlias}.waitForEvent('download');`);
 
-    // console.log('Main Parent generateActionCall - ', actionInContext);
-    formatter.add(wrapWithStep(actionInContext.description, this._generateActionCall(subject, actionInContext)));
+    // Generate the action code
+    let actionCode = this._generateActionCall(subject, actionInContext);
+
+    // Enhance with LLM if enabled
+    if (this._useEnhancer) {
+      try {
+        actionCode = await enhanceWithLLM(actionCode, action, actionInContext);
+      } catch (error) {
+        // Continue with the original code if enhancement fails
+      }
+    }
+
+    formatter.add(wrapWithStep(actionInContext.description, actionCode));
 
     if (signals.popup)
       formatter.add(`const ${signals.popup.popupAlias} = await ${signals.popup.popupAlias}Promise;`);
@@ -96,7 +110,7 @@ export class JavaScriptLanguageGenerator implements LanguageGenerator {
         // Include targeting comments if targetInfo is available
         let result = `await ${subject}.${this._asLocator(action.selector)}.${method}(${optionsString});`;
         if (action.targetInfo) {
-          const { tagName, elementDimensions, relativePosition, elementAttributes, elementClasses } = action.targetInfo;
+          const { tagName, elementDimensions, relativePosition, elementClasses } = action.targetInfo;
           const comments = [];
           comments.push(`// Clicked on ${tagName}${elementClasses ? ` with classes "${elementClasses}"` : ''}`);
           if (elementDimensions)
