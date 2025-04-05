@@ -14,8 +14,11 @@
  * limitations under the License.
  */
 
-import { ChatOllama } from 'langchain/chat_models/ollama';
-import { HumanMessage, SystemMessage } from 'langchain/schema';
+// import { ChatOllama } from 'langchain/chat_models/ollama';
+import { ChatOllama } from '@langchain/ollama';
+import { HumanMessage, SystemMessage } from '@langchain/core/messages';
+
+// import { HumanMessage, SystemMessage } from 'langchain/schema';
 
 import type * as actions from '@recorder/actions';
 
