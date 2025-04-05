@@ -16,7 +16,7 @@ touch playwright-debug.log
 if [[ "$PW_SHOW_RECORDER_LOGS" == "1" ]]; then
   echo "Starting recorder log monitor..."
   (
-    tail -f /tmp/playwright-recorder-debug.log | grep -E '\[Recorder\]|pw:debug:recorder' | 
+    tail -f playwright-debug.log | grep -E '\[Recorder\]|pw:debug:recorder' | 
     while read line; do 
       echo -e "\033[36m[RECORDER]\033[0m $line"
     done
