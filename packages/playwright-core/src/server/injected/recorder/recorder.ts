@@ -232,7 +232,7 @@ class RecordActionTool implements RecorderTool {
   onClick(event: MouseEvent) {
     // in webkit, sliding a range element may trigger a click event with a different target if the mouse is released outside the element bounding box.
     // So we check the hovered element instead, and if it is a range input, we skip click handling
-    console.log('onClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClick');
+    console.log('onClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClick');
     console.log(event);
     
     if (isRangeInput(this._hoveredElement))
@@ -1488,21 +1488,45 @@ function inputValue(target: Element): string {
 }
 
 function getTargetInfo(event: Event): any {
-  // Send this to the main window console to be captured by the Node process
-  self.console.log('[Recorder] Getting target info for event:', event.type);
-  const targetElement = (event.target as HTMLElement);
+  self.console.log('[Recorder] Getting target info for event:', event);
+  
+  // Send detailed debug information to be captured by our monitoring tools
+  const targetElement = event.target as HTMLElement;
   if (!targetElement)
-    return undefined;
-
+    return void 0;
+    
+  // Get more detailed information about the event
+  const eventDetails = {
+    type: event.type,
+    isTrusted: event.isTrusted,
+    bubbles: event.bubbles,
+    cancelable: event.cancelable,
+    timeStamp: event.timeStamp,
+    composed: event.composed
+  };
+  
+  // Log detailed information about the event
+  // self.console.log('[Recorder] Event details:', JSON.stringify(eventDetails));
+  
+  // Send a custom event that can be captured by Playwright's CDP session
+  const recorderDebug = {
+    pwDebugEvent: true,
+    source: 'recorder',
+    message: `Getting target info for event: ${event.type}`,
+    eventDetails,
+    targetElement: targetElement.tagName
+  };
+  
+  // Use console.debug with a special prefix for easier filtering
+  console.debug('pw:debug:recorder', JSON.stringify(recorderDebug));
+  
   const rect = targetElement.getBoundingClientRect();
   const attributes: Record<string, string> = {};
-
-  // Collect attributes
   for (let i = 0; i < targetElement.attributes.length; i++) {
     const attr = targetElement.attributes[i];
     attributes[attr.name] = attr.value;
   }
-
+  
   const info: any = {
     tagName: targetElement.tagName,
     elementDimensions: {
