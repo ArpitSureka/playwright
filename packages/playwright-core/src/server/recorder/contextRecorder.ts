@@ -182,7 +182,7 @@ export class ContextRecorder extends EventEmitter {
           const primarySourceText = this._recorderSources[0].text;
           
           // Enhance the full script
-          console.log('Enhancing full script after page close...');
+          process.stdout.write('Enhancing full script after page close...\n');
           const enhancedScript = await enhanceCompleteScript(primarySourceText, this._currentActions);
           
           // Update the first source with the enhanced script
@@ -198,7 +198,7 @@ export class ContextRecorder extends EventEmitter {
             actions: this._currentActions
           });
         } catch (error) {
-          console.error('Error while enhancing full script:', error);
+          process.stderr.write(`Error while enhancing full script: ${error}\n`);
         }
       }
       

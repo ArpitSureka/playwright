@@ -21,6 +21,22 @@ Additionally, when a page is closed, the complete generated script can be enhanc
 1. Set the environment variable: `PW_ENHANCE_FULL_SCRIPT=1`
 2. This will automatically enhance the complete test script when recording is finished
 
+### Enabling Debug Logging
+
+To see detailed logs from the LLM enhancer process, set:
+
+```
+PW_DEBUG_LLM=1
+```
+
+This will display comprehensive debug information about the LLM enhancement process, including:
+- When cache hits occur
+- Details about actions being processed
+- Connection information for Ollama
+- The flow of data to and from the LLM
+
+For browser console logs to appear in the terminal when running codegen, no additional configuration is required as they are automatically forwarded.
+
 ### Benefits
 
 - Better organization of tests into logical sections

@@ -232,7 +232,7 @@ class RecordActionTool implements RecorderTool {
   onClick(event: MouseEvent) {
     // in webkit, sliding a range element may trigger a click event with a different target if the mouse is released outside the element bounding box.
     // So we check the hovered element instead, and if it is a range input, we skip click handling
-    console.log('onClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClick');
+    console.log('onClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClick');
     console.log(event);
     
     if (isRangeInput(this._hoveredElement))
@@ -1488,8 +1488,8 @@ function inputValue(target: Element): string {
 }
 
 function getTargetInfo(event: Event): any {
-  console.log('getTargetInfogetTargetInfogetTargetInfogetTargetInfogetTargetInfogetTargetInfogetTargetInfogetTargetInfogetTargetInfogetTargetInfogetTargetInfo');
-  console.log(event);
+  // Send this to the main window console to be captured by the Node process
+  self.console.log('[Recorder] Getting target info for event:', event.type);
   const targetElement = (event.target as HTMLElement);
   if (!targetElement)
     return undefined;
@@ -1513,6 +1513,8 @@ function getTargetInfo(event: Event): any {
     elementClasses: targetElement.className
   };
 
+  self.console.log('[Recorder] Target element:', info.tagName, 'with classes:', info.elementClasses);
+
   // Add input type for form elements
   if (targetElement.tagName === 'INPUT')
     info.inputType = (targetElement as HTMLInputElement).type;
@@ -1525,6 +1527,7 @@ function getTargetInfo(event: Event): any {
       x: rect.width ? (event.offsetX / rect.width) : 0,
       y: rect.height ? (event.offsetY / rect.height) : 0
     };
+    self.console.log('[Recorder] Mouse event position:', info.relativePosition);
   }
 
   return info;

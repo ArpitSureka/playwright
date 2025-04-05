@@ -16,6 +16,7 @@
 
 import { ChatOllama } from 'langchain/chat_models/ollama';
 import { HumanMessage, SystemMessage } from 'langchain/schema';
+
 import type * as actions from '@recorder/actions';
 
 // Cache to ensure we don't process the same action multiple times
@@ -27,6 +28,14 @@ const processedScriptCache = new Map<string, string>();
 // LLM configuration
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3';
+const DEBUG_LLM = process.env.PW_DEBUG_LLM === '1';
+
+// Helper function for logging that respects the debug flag
+function debugLog(message: string) {
+  if (DEBUG_LLM) {
+    process.stdout.write(`[LLM Debug] ${message}\n`);
+  }
+}
 
 export async function enhanceWithLLM(
   generatedCode: string, 
@@ -39,10 +48,12 @@ export async function enhanceWithLLM(
     
     // Check if we've already processed this action
     if (processedActionCache.has(actionKey)) {
+      debugLog(`Using cached result for action: ${action.name}`);
       return processedActionCache.get(actionKey)!;
     }
 
-    console.log('Enhancing code with LLM for action:', action.name);
+    process.stdout.write(`Enhancing code with LLM for action: ${action.name}\n`);
+    debugLog(`Full action data: ${JSON.stringify(action, null, 2)}`);
     
     // Initialize the chat model
     const model = new ChatOllama({
@@ -50,6 +61,8 @@ export async function enhanceWithLLM(
       model: OLLAMA_MODEL,
       temperature: 0.7,
     });
+    
+    debugLog(`Using Ollama at ${OLLAMA_BASE_URL} with model ${OLLAMA_MODEL}`);
 
     // Prepare the context for the LLM
     const actionData = JSON.stringify(action, null, 2);
@@ -76,6 +89,8 @@ ${generatedCode}
 
 Please enhance this code to make it more robust and maintainable while preserving its functionality.`;
 
+    debugLog('Sending prompt to LLM...');
+    
     // Get response from the LLM
     const response = await model.call([
       new SystemMessage(systemPrompt),
@@ -83,6 +98,7 @@ Please enhance this code to make it more robust and maintainable while preservin
     ]);
 
     let enhancedCode = response.content.toString();
+    debugLog('Got response from LLM');
     
     // Extract code from markdown code blocks if present
     if (enhancedCode.includes('```')) {
@@ -90,15 +106,18 @@ Please enhance this code to make it more robust and maintainable while preservin
       const match = enhancedCode.match(codeBlockRegex);
       if (match && match[1]) {
         enhancedCode = match[1].trim();
+        debugLog('Extracted code from markdown code block');
       }
     }
 
     // Cache the result for future use
     processedActionCache.set(actionKey, enhancedCode);
+    debugLog(`Cached result for action: ${action.name}`);
     
     return enhancedCode;
   } catch (error) {
-    console.error('Error enhancing code with LLM:', error);
+    process.stderr.write(`Error enhancing code with LLM: ${error}\n`);
+    debugLog(`Full error details: ${error && (error as Error).stack}`);
     // Fall back to original code if there's an error
     return generatedCode;
   }
@@ -115,10 +134,12 @@ export async function enhanceCompleteScript(
     
     // Check if we've already processed this script
     if (processedScriptCache.has(scriptHash)) {
+      debugLog('Using cached result for complete script');
       return processedScriptCache.get(scriptHash)!;
     }
 
-    console.log('Enhancing complete test script with LLM...');
+    process.stdout.write('Enhancing complete test script with LLM...\n');
+    debugLog(`Complete script length: ${completeScript.length} characters`);
     
     // Initialize the chat model
     const model = new ChatOllama({
@@ -126,6 +147,8 @@ export async function enhanceCompleteScript(
       model: OLLAMA_MODEL,
       temperature: 0.7,
     });
+    
+    debugLog(`Using Ollama at ${OLLAMA_BASE_URL} with model ${OLLAMA_MODEL}`);
 
     // Prepare a specialized system prompt for the complete script analysis
     const systemPrompt = `You are an expert Playwright test automation engineer. You need to optimize and improve a full Playwright test script.
@@ -151,6 +174,8 @@ ${completeScript}
 
 Please provide the complete enhanced test script.`;
 
+    debugLog('Sending complete script to LLM...');
+    
     // Get response from the LLM
     const response = await model.call([
       new SystemMessage(systemPrompt),
@@ -158,6 +183,7 @@ Please provide the complete enhanced test script.`;
     ]);
 
     let enhancedScript = response.content.toString();
+    debugLog('Got response from LLM for complete script');
     
     // Extract code from markdown code blocks if present
     if (enhancedScript.includes('```')) {
@@ -165,15 +191,18 @@ Please provide the complete enhanced test script.`;
       const match = enhancedScript.match(codeBlockRegex);
       if (match && match[1]) {
         enhancedScript = match[1].trim();
+        debugLog('Extracted code from markdown code block');
       }
     }
 
     // Cache the result
     processedScriptCache.set(scriptHash, enhancedScript);
+    debugLog('Cached result for complete script');
     
     return enhancedScript;
   } catch (error) {
-    console.error('Error enhancing complete script with LLM:', error);
+    process.stderr.write(`Error enhancing complete script with LLM: ${error}\n`);
+    debugLog(`Full error details: ${error && (error as Error).stack}`);
     // Fall back to original script if there's an error
     return completeScript;
   }
