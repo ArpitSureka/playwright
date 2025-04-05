@@ -110,22 +110,79 @@ export class JavaScriptLanguageGenerator implements LanguageGenerator {
         return result;
       }
       case 'check':
-        return `await ${subject}.${this._asLocator(action.selector)}.check();`;
+        // Include targeting comments if targetInfo is available
+        let checkResult = `await ${subject}.${this._asLocator(action.selector)}.check();`;
+        if (action.targetInfo) {
+          const { tagName, elementDimensions, elementClasses, inputType } = action.targetInfo;
+          const comments = [];
+          comments.push(`// Checked ${tagName}${elementClasses ? ` with classes "${elementClasses}"` : ''}${inputType ? ` (type="${inputType}")` : ''}`);
+          if (elementDimensions)
+            comments.push(`// Element dimensions: ${elementDimensions.width}x${elementDimensions.height}`);
+          if (comments.length > 0)
+            checkResult = comments.join('\n') + '\n' + checkResult;
+        }
+        return checkResult;
       case 'uncheck':
-        return `await ${subject}.${this._asLocator(action.selector)}.uncheck();`;
+        // Include targeting comments if targetInfo is available
+        let uncheckResult = `await ${subject}.${this._asLocator(action.selector)}.uncheck();`;
+        if (action.targetInfo) {
+          const { tagName, elementDimensions, elementClasses, inputType } = action.targetInfo;
+          const comments = [];
+          comments.push(`// Unchecked ${tagName}${elementClasses ? ` with classes "${elementClasses}"` : ''}${inputType ? ` (type="${inputType}")` : ''}`);
+          if (elementDimensions)
+            comments.push(`// Element dimensions: ${elementDimensions.width}x${elementDimensions.height}`);
+          if (comments.length > 0)
+            uncheckResult = comments.join('\n') + '\n' + uncheckResult;
+        }
+        return uncheckResult;
       case 'fill':
-        return `await ${subject}.${this._asLocator(action.selector)}.fill(${quote(action.text)});`;
+        // Include targeting comments if targetInfo is available
+        let fillResult = `await ${subject}.${this._asLocator(action.selector)}.fill(${quote(action.text)});`;
+        if (action.targetInfo) {
+          const { tagName, elementDimensions, elementClasses, inputType } = action.targetInfo;
+          const comments = [];
+          comments.push(`// Filled ${tagName}${elementClasses ? ` with classes "${elementClasses}"` : ''}${inputType ? ` (type="${inputType}")` : ''}`);
+          if (elementDimensions)
+            comments.push(`// Element dimensions: ${elementDimensions.width}x${elementDimensions.height}`);
+          comments.push(`// Entered text: "${action.text}"`);
+          if (comments.length > 0)
+            fillResult = comments.join('\n') + '\n' + fillResult;
+        }
+        return fillResult;
       case 'setInputFiles':
         return `await ${subject}.${this._asLocator(action.selector)}.setInputFiles(${formatObject(action.files.length === 1 ? action.files[0] : action.files)});`;
       case 'press': {
         const modifiers = toKeyboardModifiers(action.modifiers);
         const shortcut = [...modifiers, action.key].join('+');
-        return `await ${subject}.${this._asLocator(action.selector)}.press(${quote(shortcut)});`;
+        // Include targeting comments if targetInfo is available
+        let pressResult = `await ${subject}.${this._asLocator(action.selector)}.press(${quote(shortcut)});`;
+        if (action.targetInfo) {
+          const { tagName, elementDimensions, elementClasses } = action.targetInfo;
+          const comments = [];
+          comments.push(`// Pressed ${shortcut} on ${tagName}${elementClasses ? ` with classes "${elementClasses}"` : ''}`);
+          if (elementDimensions)
+            comments.push(`// Element dimensions: ${elementDimensions.width}x${elementDimensions.height}`);
+          if (comments.length > 0)
+            pressResult = comments.join('\n') + '\n' + pressResult;
+        }
+        return pressResult;
       }
       case 'navigate':
         return `await ${subject}.goto(${quote(action.url)});`;
       case 'select':
-        return `await ${subject}.${this._asLocator(action.selector)}.selectOption(${formatObject(action.options.length === 1 ? action.options[0] : action.options)});`;
+        // Include targeting comments if targetInfo is available
+        let selectResult = `await ${subject}.${this._asLocator(action.selector)}.selectOption(${formatObject(action.options.length === 1 ? action.options[0] : action.options)});`;
+        if (action.targetInfo) {
+          const { tagName, elementDimensions, elementClasses, optionsCount } = action.targetInfo;
+          const comments = [];
+          comments.push(`// Selected option in ${tagName}${elementClasses ? ` with classes "${elementClasses}"` : ''}${optionsCount ? ` (${optionsCount} options available)` : ''}`);
+          if (elementDimensions)
+            comments.push(`// Element dimensions: ${elementDimensions.width}x${elementDimensions.height}`);
+          comments.push(`// Selected value(s): ${JSON.stringify(action.options)}`);
+          if (comments.length > 0)
+            selectResult = comments.join('\n') + '\n' + selectResult;
+        }
+        return selectResult;
       case 'assertText':
         return `${this._isTest ? '' : '// '}await expect(${subject}.${this._asLocator(action.selector)}).${action.substring ? 'toContainText' : 'toHaveText'}(${quote(action.text)});`;
       case 'assertChecked':

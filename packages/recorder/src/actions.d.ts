@@ -59,15 +59,36 @@ export type ClickAction = ActionWithSelector & {
 
 export type CheckAction = ActionWithSelector & {
   name: 'check',
+  targetInfo?: {
+    tagName: string,
+    elementDimensions?: { width: number, height: number },
+    elementAttributes?: Record<string, string>,
+    elementClasses?: string,
+    inputType?: string
+  }
 };
 
 export type UncheckAction = ActionWithSelector & {
   name: 'uncheck',
+  targetInfo?: {
+    tagName: string,
+    elementDimensions?: { width: number, height: number },
+    elementAttributes?: Record<string, string>,
+    elementClasses?: string,
+    inputType?: string
+  }
 };
 
 export type FillAction = ActionWithSelector & {
   name: 'fill',
   text: string,
+  targetInfo?: {
+    tagName: string,
+    elementDimensions?: { width: number, height: number },
+    elementAttributes?: Record<string, string>,
+    elementClasses?: string,
+    inputType?: string
+  }
 };
 
 export type NavigateAction = ActionBase & {
@@ -89,11 +110,24 @@ export type PressAction = ActionBase & {
   selector: string,
   key: string,
   modifiers: number,
+  targetInfo?: {
+    tagName: string,
+    elementDimensions?: { width: number, height: number },
+    elementAttributes?: Record<string, string>,
+    elementClasses?: string
+  }
 };
 
 export type SelectAction = ActionWithSelector & {
   name: 'select',
   options: string[],
+  targetInfo?: {
+    tagName: string,
+    elementDimensions?: { width: number, height: number },
+    elementAttributes?: Record<string, string>,
+    elementClasses?: string,
+    optionsCount?: number
+  }
 };
 
 export type SetInputFilesAction = ActionWithSelector & {

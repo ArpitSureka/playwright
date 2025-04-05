@@ -232,6 +232,9 @@ class RecordActionTool implements RecorderTool {
   onClick(event: MouseEvent) {
     // in webkit, sliding a range element may trigger a click event with a different target if the mouse is released outside the element bounding box.
     // So we check the hovered element instead, and if it is a range input, we skip click handling
+    console.log('onClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClick');
+    console.log(event);
+    
     if (isRangeInput(this._hoveredElement))
       return;
     // Right clicks are handled by 'contextmenu' event if its auxclick
@@ -251,6 +254,7 @@ class RecordActionTool implements RecorderTool {
         name: checkbox.checked ? 'check' : 'uncheck',
         selector: this._hoveredModel!.selector,
         signals: [],
+        targetInfo: getTargetInfo(event)
       });
       return;
     }
@@ -405,6 +409,7 @@ class RecordActionTool implements RecorderTool {
         selector: this._hoveredModel!.selector,
         signals: [],
         text: target.value,
+        targetInfo: getTargetInfo(event)
       });
       return;
     }
@@ -418,11 +423,16 @@ class RecordActionTool implements RecorderTool {
       // Non-navigating actions are simply recorded by Playwright.
       if (this._consumedDueWrongTarget(event))
         return;
+
+      if (this._consumedDueToNoModel(event, this._activeModel))
+        return;
+
       this._recorder.recordAction({
         name: 'fill',
         selector: this._activeModel!.selector,
         signals: [],
-        text: target.isContentEditable ? target.innerText : (target as HTMLInputElement).value,
+        text: inputValue(target),
+        targetInfo: getTargetInfo(event)
       });
     }
 
@@ -434,7 +444,8 @@ class RecordActionTool implements RecorderTool {
         name: 'select',
         selector: this._activeModel!.selector,
         options: [...selectElement.selectedOptions].map(option => option.value),
-        signals: []
+        signals: [],
+        targetInfo: getTargetInfo(event)
       });
     }
   }
@@ -456,6 +467,7 @@ class RecordActionTool implements RecorderTool {
           name: checkbox.checked ? 'uncheck' : 'check',
           selector: this._activeModel!.selector,
           signals: [],
+          targetInfo: getTargetInfo(event)
         });
         return;
       }
@@ -467,6 +479,7 @@ class RecordActionTool implements RecorderTool {
       signals: [],
       key: event.key,
       modifiers: modifiersForEvent(event),
+      targetInfo: getTargetInfo(event)
     });
   }
 
@@ -1468,33 +1481,53 @@ function positionForEvent(event: MouseEvent): Point | undefined {
   };
 }
 
-function getTargetInfo(event: MouseEvent): any {
+function inputValue(target: Element): string {
+  if ((target as HTMLElement).isContentEditable)
+    return (target as HTMLElement).innerText;
+  return (target as HTMLInputElement).value;
+}
+
+function getTargetInfo(event: Event): any {
+  console.log('getTargetInfogetTargetInfogetTargetInfogetTargetInfogetTargetInfogetTargetInfogetTargetInfogetTargetInfogetTargetInfogetTargetInfogetTargetInfo');
+  console.log(event);
   const targetElement = (event.target as HTMLElement);
   if (!targetElement)
     return undefined;
-  
+
   const rect = targetElement.getBoundingClientRect();
   const attributes: Record<string, string> = {};
-  
+
   // Collect attributes
   for (let i = 0; i < targetElement.attributes.length; i++) {
     const attr = targetElement.attributes[i];
     attributes[attr.name] = attr.value;
   }
-  
-  return {
+
+  const info: any = {
     tagName: targetElement.tagName,
     elementDimensions: {
       width: rect.width,
       height: rect.height
     },
-    relativePosition: {
-      x: rect.width ? (event.offsetX / rect.width) : 0,
-      y: rect.height ? (event.offsetY / rect.height) : 0
-    },
     elementAttributes: attributes,
     elementClasses: targetElement.className
   };
+
+  // Add input type for form elements
+  if (targetElement.tagName === 'INPUT')
+    info.inputType = (targetElement as HTMLInputElement).type;
+  else if (targetElement.tagName === 'SELECT')
+    info.optionsCount = (targetElement as HTMLSelectElement).options.length;
+
+  // Add relative position for mouse events
+  if (event instanceof MouseEvent) {
+    info.relativePosition = {
+      x: rect.width ? (event.offsetX / rect.width) : 0,
+      y: rect.height ? (event.offsetY / rect.height) : 0
+    };
+  }
+
+  return info;
 }
 
 function consumeEvent(e: Event) {
