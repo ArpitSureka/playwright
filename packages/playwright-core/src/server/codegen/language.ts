@@ -96,7 +96,21 @@ export function toClickOptionsForSourceCode(action: actions.ClickAction): types.
   // Do not render clickCount === 2 for dblclick.
   if (action.clickCount > 2)
     options.clickCount = action.clickCount;
-  if (action.position)
+
+  // Calculate position with relative info if available
+  if (action.targetInfo?.relativePosition && action.targetInfo?.elementDimensions) {
+    const { width, height } = action.targetInfo.elementDimensions;
+    const { x, y } = action.targetInfo.relativePosition;
+    // Convert relative position (0-1) to actual pixels
+    options.position = {
+      x: Math.round(width * x),
+      y: Math.round(height * y)
+    };
+  } else if (action.position){
     options.position = action.position;
+  }
+  // Add targetInfo if available
+  if (action.targetInfo)
+    options.targetInfo = action.targetInfo;
   return options;
 }

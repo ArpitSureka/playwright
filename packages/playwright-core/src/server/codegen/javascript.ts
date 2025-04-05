@@ -66,6 +66,7 @@ export class JavaScriptLanguageGenerator implements LanguageGenerator {
     if (signals.download)
       formatter.add(`const download${signals.download.downloadAlias}Promise = ${pageAlias}.waitForEvent('download');`);
 
+    // console.log('Main Parent generateActionCall - ', actionInContext);
     formatter.add(wrapWithStep(actionInContext.description, this._generateActionCall(subject, actionInContext)));
 
     if (signals.popup)
@@ -78,6 +79,8 @@ export class JavaScriptLanguageGenerator implements LanguageGenerator {
 
   private _generateActionCall(subject: string, actionInContext: actions.ActionInContext): string {
     const action = actionInContext.action;
+    // console.log('hello world - xox0x0x0x0x0x00x0x0x0x0x0x0x00x0x00x0x00x0x00x0x0x0x0x00x0x0x00x0x0x00x0x0x00x0x');
+    // console.log('generateActionCall - ', action);
     switch (action.name) {
       case 'openPage':
         throw Error('Not reached');
@@ -89,7 +92,22 @@ export class JavaScriptLanguageGenerator implements LanguageGenerator {
           method = 'dblclick';
         const options = toClickOptionsForSourceCode(action);
         const optionsString = formatOptions(options, false);
-        return `await ${subject}.${this._asLocator(action.selector)}.${method}(${optionsString});`;
+
+        // Include targeting comments if targetInfo is available
+        let result = `await ${subject}.${this._asLocator(action.selector)}.${method}(${optionsString});`;
+        if (action.targetInfo) {
+          const { tagName, elementDimensions, relativePosition, elementAttributes, elementClasses } = action.targetInfo;
+          const comments = [];
+          comments.push(`// Clicked on ${tagName}${elementClasses ? ` with classes "${elementClasses}"` : ''}`);
+          if (elementDimensions)
+            comments.push(`// Element dimensions: ${elementDimensions.width}x${elementDimensions.height}`);
+          if (relativePosition)
+            comments.push(`// Click position relative to element: ${(relativePosition.x * 100).toFixed(1)}%, ${(relativePosition.y * 100).toFixed(1)}%`);
+          if (comments.length > 0)
+            result = comments.join('\n') + '\n' + result;
+        }
+
+        return result;
       }
       case 'check':
         return `await ${subject}.${this._asLocator(action.selector)}.check();`;
