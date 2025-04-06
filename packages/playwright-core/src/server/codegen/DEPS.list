@@ -1,3 +1,4 @@
 [*]
 ../../utils/
 ../deviceDescriptors.ts
+./llmConfig.ts

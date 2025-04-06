@@ -17,8 +17,8 @@
 import { ChatOllama } from '@langchain/ollama';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 
-
 import type * as actions from '@recorder/actions';
+import { loadLLMConfig, type LLMConfig } from './llmConfig';
 
 // Cache to ensure we don't process the same action multiple times
 const processedActionCache = new Map<string, string>();
@@ -26,14 +26,12 @@ const processedActionCache = new Map<string, string>();
 // Cache for complete scripts to avoid processing the same script multiple times
 const processedScriptCache = new Map<string, string>();
 
-// LLM configuration
-const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3';
-const DEBUG_LLM = process.env.PW_DEBUG_LLM === '1';
+// Load configuration
+const llmConfig = loadLLMConfig();
 
 // Helper function for logging that respects the debug flag
 function debugLog(message: string) {
-  if (DEBUG_LLM) {
+  if (llmConfig.debug) {
     process.stdout.write(`[LLM Debug] ${message}\n`);
   }
 }
@@ -56,14 +54,15 @@ export async function enhanceWithLLM(
     process.stdout.write(`Enhancing code with LLM for action: ${action.name}\n`);
     debugLog(`Full action data: ${JSON.stringify(action, null, 2)}`);
 
-    // Initialize the chat model
+    // Initialize the chat model with config settings
     const model = new ChatOllama({
-      baseUrl: OLLAMA_BASE_URL,
-      model: OLLAMA_MODEL,
-      temperature: 0.7,
+      baseUrl: llmConfig.ollama.baseUrl,
+      model: llmConfig.ollama.model,
+      temperature: llmConfig.ollama.temperature,
+      numPredict: llmConfig.ollama.numPredict
     });
 
-    debugLog(`Using Ollama at ${OLLAMA_BASE_URL} with model ${OLLAMA_MODEL}`);
+    debugLog(`Using Ollama at ${llmConfig.ollama.baseUrl} with model ${llmConfig.ollama.model}`);
 
     // Extract element information if available - using optional chaining to avoid type errors
     const targetInfo = (action as any).targetInfo || {};
@@ -86,17 +85,7 @@ Element Information:
 
     // Prepare the context for the LLM
     const actionData = JSON.stringify(action, null, 2);
-    const systemPrompt = `You are an expert Playwright test developer. Your task is to enhance the generated test code with better comments, error handling, assertions, or any improvements that make the test more robust and maintainable.
-    
-Focus on these aspects:
-1. Better descriptive comments about the element interactions
-2. Improved error handling where appropriate
-3. Additional assertions that verify the expected state
-4. More maintainable code structure
-5. Preserve the existing functionality but make it more robust
-6. Use the provided element information (XPath, JS Path, etc.) to create more robust selectors or fallback selectors when appropriate
-
-Just return the improved code without explanations.`;
+    const systemPrompt = llmConfig.prompts.systemPrompt;
 
     const userPrompt = `Here's a Playwright action in JSON format:
 \`\`\`json
@@ -162,30 +151,17 @@ export async function enhanceCompleteScript(
     process.stdout.write('Enhancing complete test script with LLM...\n');
     debugLog(`Complete script length: ${completeScript.length} characters`);
 
-    // Initialize the chat model
+    // Initialize the chat model with config settings
     const model = new ChatOllama({
-      baseUrl: OLLAMA_BASE_URL,
-      model: OLLAMA_MODEL,
-      temperature: 0.7,
+      baseUrl: llmConfig.ollama.baseUrl,
+      model: llmConfig.ollama.model,
+      temperature: llmConfig.ollama.completeScriptTemperature,
     });
 
-    debugLog(`Using Ollama at ${OLLAMA_BASE_URL} with model ${OLLAMA_MODEL}`);
+    debugLog(`Using Ollama at ${llmConfig.ollama.baseUrl} with model ${llmConfig.ollama.model}`);
 
     // Prepare a specialized system prompt for the complete script analysis
-    const systemPrompt = `You are an expert Playwright test automation engineer. You need to optimize and improve a full Playwright test script.
-
-Focus on these aspects for the complete test:
-1. Organize the test into logical sections with appropriate comments
-2. Add proper setup and teardown if missing
-3. Implement better wait strategies and timeouts where needed
-4. Add meaningful assertions to verify test success
-5. Implement error handling and recovery mechanisms
-6. Optimize selectors for better test reliability
-7. Refactor repeated code patterns into reusable functions
-8. Add logging to help with debugging
-9. Ensure the test follows best practices for Playwright automation
-
-Return the complete improved test script. Do not include explanations, just the improved code.`;
+    const systemPrompt = llmConfig.prompts.completeScriptSystemPrompt;
 
     const userPrompt = `Here is a complete Playwright test script that was auto-generated. Please analyze and improve it to make it more robust, maintainable, and reliable:
 

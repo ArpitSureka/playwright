@@ -186,6 +186,14 @@ Key modified files:
 - Configurable model parameters (temperature, token limits)
 - Automatic caching of LLM results for better performance
 
+## 🔄 Contributing
+
+Contributions are welcome! See the original Playwright contribution guidelines for details.
+
+## 📄 License
+
+This fork maintains the original Playwright license (Apache 2.0).
+
 ## Feature left 
    - Commenting 
    - Fixing env
@@ -197,12 +205,3 @@ Key modified files:
    - testing it from outside
    - browser close code llm generation
    - changing the structure of llmEnchancer and code such that multiple llm calls are being process simultaneously
-
-## 🔄 Contributing
-
-Contributions are welcome! See the original Playwright contribution guidelines for details.
-
-## 📄 License
-
-This fork maintains the original Playwright license (Apache 2.0).
-
