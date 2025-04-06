@@ -28,6 +28,8 @@ The Playwright Recorder has been enhanced with several new features:
    - Uses element context to create better selectors and more maintainable code
    - Automatically optimizes tests for readability and robustness
    - Configurable via JSON configuration file
+   - Support for multiple LLM providers (Ollama, OpenAI, Claude, Azure OpenAI, custom)
+   - Customizable prompt templates for fine-tuning LLM responses
 
 5. **Enhanced Logging**
    - Captures detailed recorder events for better debugging
@@ -78,7 +80,21 @@ The `.env` file controls various features:
 # Enable the LLM enhancer for generated code
 PW_USE_LLM_ENHANCER=1
 
-# Ollama configuration (can also be set in config file)
+# LLM provider selection
+# To use OpenAI
+OPENAI_API_KEY=your-openai-api-key
+OPENAI_MODEL=gpt-3.5-turbo
+
+# OR to use Anthropic (Claude)
+ANTHROPIC_API_KEY=your-anthropic-api-key
+ANTHROPIC_MODEL=claude-3-sonnet-20240229
+
+# OR to use Azure OpenAI
+AZURE_OPENAI_API_KEY=your-azure-openai-api-key
+AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com
+AZURE_OPENAI_DEPLOYMENT=your-deployment-name
+
+# OR to use Ollama (default)
 OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_MODEL=llama3
 
@@ -99,26 +115,35 @@ You can now configure the LLM enhancer using a JSON configuration file. Create a
 
 ```json
 {
-  "ollama": {
-    "baseUrl": "http://localhost:11434",
-    "model": "llama3",
+  "provider": "openai",
+  "openai": {
+    "apiKey": "your-openai-api-key",
+    "model": "gpt-3.5-turbo",
     "temperature": 0.2,
-    "numPredict": 300,
-    "completeScriptTemperature": 0.7
+    "maxTokens": 1024
   },
   "debug": false,
   "prompts": {
     "systemPrompt": "You are an expert Playwright test developer...",
-    "completeScriptSystemPrompt": "You are an expert Playwright test automation engineer..."
+    "completeScriptSystemPrompt": "You are an expert Playwright test automation engineer...",
+    "userPromptTemplate": "Here's a Playwright action in JSON format:\n```json\n{{actionData}}\n```\n{{elementContext}}\nHere's the generated code for this action:\n```javascript\n{{generatedCode}}\n```\n\nPlease enhance this code...",
+    "completeScriptUserPromptTemplate": "Here is a complete Playwright test script that was auto-generated...\n\n```javascript\n{{completeScript}}\n```\n\nPlease provide the complete enhanced test script."
   }
 }
 ```
 
 The configuration file allows you to:
-- Set the Ollama endpoint and model
-- Configure temperature and other model parameters
-- Customize the system prompts used for code enhancement
+- Choose from multiple LLM providers (Ollama, OpenAI, Claude, Azure OpenAI, or custom)
+- Set API keys, endpoints, and model names
+- Configure temperature and token limits for each provider
+- Customize both system and user prompts with templates
 - Enable/disable debug logging
+
+Template variables for user prompts:
+- `{{actionData}}`: The JSON data of the action being processed
+- `{{elementContext}}`: Detailed information about the element
+- `{{generatedCode}}`: The original generated code for enhancement
+- `{{completeScript}}`: The complete script for full-script enhancement
 
 Environment variables will override settings in the configuration file.
 
@@ -144,9 +169,9 @@ The enhanced recorder is built on top of Playwright's existing recorder infrastr
    - Extended the recorder's event handling system
 
 3. **LLM Integration Layer**
-   - Connected to local LLM via Ollama
+   - Provider-agnostic architecture supporting multiple LLMs
    - Enhanced prompts with detailed element context
-   - Optimized code generation process
+   - Customizable templates for fine-tuning LLM behavior
    - Configurable via JSON configuration files
 
 4. **Logging System**
@@ -162,6 +187,7 @@ Key modified files:
 - `packages/recorder/src/actions.d.ts`: Added new action types
 - `packages/playwright-core/src/server/codegen/llmEnhancer.ts`: Enhanced LLM integration
 - `packages/playwright-core/src/server/codegen/llmConfig.ts`: Configuration management for LLM features
+- `packages/playwright-core/src/server/codegen/llmProvider.ts`: Multi-provider LLM integration
 
 ## 💼 Use Cases
 
@@ -182,21 +208,11 @@ Key modified files:
 
 ## ✅ Completed Features
 - LLM configuration via environment variables and JSON config files
-- Customizable prompts for different enhancement scenarios
+- Multi-provider support (Ollama, OpenAI, Claude, Azure OpenAI, custom)
+- Customizable prompt templates with variable substitution
 - Configurable model parameters (temperature, token limits)
 - Automatic caching of LLM results for better performance
-
-## Feature left 
-   - Commenting 
-   - Fixing env
-   - Fixing prompt to make it editable from outside
-   - Prompt tuning 
-   - making temp accessible from outside 
-   - improving documentation 
-   - code cleaning to merge with microsofts code 
-   - testing it from outside
-   - browser close code llm generation
-   - changing the structure of llmEnchancer and code such that multiple llm calls are being process simultaneously
+- Provider-agnostic architecture for easy extensibility
 
 ## 🔄 Contributing
 

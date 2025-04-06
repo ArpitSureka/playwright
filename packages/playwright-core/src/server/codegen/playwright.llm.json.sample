@@ -1,4 +1,5 @@
 {
+  "provider": "ollama",
   "ollama": {
     "baseUrl": "http://localhost:11434",
     "model": "llama3",
@@ -6,9 +7,46 @@
     "numPredict": 300,
     "completeScriptTemperature": 0.7
   },
+  "openai": {
+    "apiKey": "your-openai-api-key",
+    "model": "gpt-3.5-turbo",
+    "temperature": 0.2,
+    "maxTokens": 1024,
+    "completeScriptTemperature": 0.7,
+    "organization": "your-optional-organization-id"
+  },
+  "anthropic": {
+    "apiKey": "your-anthropic-api-key",
+    "model": "claude-3-sonnet-20240229",
+    "temperature": 0.2,
+    "maxTokens": 1024,
+    "completeScriptTemperature": 0.7
+  },
+  "azureOpenai": {
+    "apiKey": "your-azure-openai-api-key",
+    "endpoint": "https://your-resource.openai.azure.com",
+    "deploymentName": "your-deployment-name",
+    "apiVersion": "2023-05-15",
+    "temperature": 0.2,
+    "maxTokens": 1024,
+    "completeScriptTemperature": 0.7
+  },
+  "customProvider": {
+    "providerModulePath": "./my-custom-provider.js",
+    "providerOptions": {
+      "apiKey": "your-api-key",
+      "endpoint": "https://your-custom-endpoint.com",
+      "otherOption": "value"
+    },
+    "temperature": 0.2,
+    "maxTokens": 1024,
+    "completeScriptTemperature": 0.7
+  },
   "debug": false,
   "prompts": {
     "systemPrompt": "You are an expert Playwright test developer. Your task is to enhance the generated test code with better comments, assertions, or any improvements that make the test more robust and maintainable.\n\nFocus on these aspects:\n1. Better descriptive comments about the element interactions\n2. Additional assertions that verify the expected state\n3. More maintainable code structure\n4. Preserve the existing functionality but make it more robust\n5. Use the provided element information (XPath, JS Path, etc.) to create more robust selectors or fallback selectors when appropriate\n\nJust return the improved code without explanations.",
-    "completeScriptSystemPrompt": "You are an expert Playwright test automation engineer. You need to optimize and improve a full Playwright test script.\n\nFocus on these aspects for the complete test:\n1. Organize the test into logical sections with appropriate comments\n2. Add proper setup and teardown if missing\n3. Implement better wait strategies and timeouts where needed\n4. Add meaningful assertions to verify test success\n5. Implement error handling and recovery mechanisms\n6. Optimize selectors for better test reliability\n7. Refactor repeated code patterns into reusable functions\n8. Add logging to help with debugging\n9. Ensure the test follows best practices for Playwright automation\n\nReturn the complete improved test script. Do not include explanations, just the improved code."
+    "completeScriptSystemPrompt": "You are an expert Playwright test automation engineer. You need to optimize and improve a full Playwright test script.\n\nFocus on these aspects for the complete test:\n1. Organize the test into logical sections with appropriate comments\n2. Add proper setup and teardown if missing\n3. Implement better wait strategies and timeouts where needed\n4. Add meaningful assertions to verify test success\n5. Implement error handling and recovery mechanisms\n6. Optimize selectors for better test reliability\n7. Refactor repeated code patterns into reusable functions\n8. Add logging to help with debugging\n9. Ensure the test follows best practices for Playwright automation\n\nReturn the complete improved test script. Do not include explanations, just the improved code.",
+    "userPromptTemplate": "Here's a Playwright action in JSON format:\n```json\n{{actionData}}\n```\n{{elementContext}}\nHere's the generated code for this action:\n```javascript\n{{generatedCode}}\n```\n\nPlease enhance this code to make it more robust and maintainable while preserving its functionality. When appropriate, consider using the element paths information to create more reliable selectors or fallback mechanisms.",
+    "completeScriptUserPromptTemplate": "Here is a complete Playwright test script that was auto-generated. Please analyze and improve it to make it more robust, maintainable, and reliable:\n\n```javascript\n{{completeScript}}\n```\n\nPlease provide the complete enhanced test script."
   }
 } 

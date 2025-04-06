@@ -14,11 +14,9 @@
  * limitations under the License.
  */
 
-import { ChatOllama } from '@langchain/ollama';
-import { HumanMessage, SystemMessage } from '@langchain/core/messages';
-
 import type * as actions from '@recorder/actions';
-import { loadLLMConfig, type LLMConfig } from './llmConfig';
+import { loadLLMConfig, processTemplate } from './llmConfig';
+import { LLMProviderFactory, MessageRole, type Message } from './llmProvider';
 
 // Cache to ensure we don't process the same action multiple times
 const processedActionCache = new Map<string, string>();
@@ -28,6 +26,9 @@ const processedScriptCache = new Map<string, string>();
 
 // Load configuration
 const llmConfig = loadLLMConfig();
+
+// Create LLM provider based on configuration
+const llmProvider = LLMProviderFactory.createProvider(llmConfig);
 
 // Helper function for logging that respects the debug flag
 function debugLog(message: string) {
@@ -54,16 +55,6 @@ export async function enhanceWithLLM(
     process.stdout.write(`Enhancing code with LLM for action: ${action.name}\n`);
     debugLog(`Full action data: ${JSON.stringify(action, null, 2)}`);
 
-    // Initialize the chat model with config settings
-    const model = new ChatOllama({
-      baseUrl: llmConfig.ollama.baseUrl,
-      model: llmConfig.ollama.model,
-      temperature: llmConfig.ollama.temperature,
-      numPredict: llmConfig.ollama.numPredict
-    });
-
-    debugLog(`Using Ollama at ${llmConfig.ollama.baseUrl} with model ${llmConfig.ollama.model}`);
-
     // Extract element information if available - using optional chaining to avoid type errors
     const targetInfo = (action as any).targetInfo || {};
     const elementPaths = targetInfo.paths || {};
@@ -85,46 +76,43 @@ Element Information:
 
     // Prepare the context for the LLM
     const actionData = JSON.stringify(action, null, 2);
-    const systemPrompt = llmConfig.prompts.systemPrompt;
-
-    const userPrompt = `Here's a Playwright action in JSON format:
-\`\`\`json
-${actionData}
-\`\`\`
-${elementContext}
-Here's the generated code for this action:
-\`\`\`javascript
-${generatedCode}
-\`\`\`
-
-Please enhance this code to make it more robust and maintainable while preserving its functionality. When appropriate, consider using the element paths information to create more reliable selectors or fallback mechanisms.`;
+    
+    // Process the user prompt template
+    const userPrompt = processTemplate(llmConfig.prompts.userPromptTemplate, {
+      actionData,
+      elementContext,
+      generatedCode
+    });
 
     debugLog('Sending prompt to LLM...');
 
-    // Get response from the LLM
-    const response = await model.call([
-      new SystemMessage(systemPrompt),
-      new HumanMessage(userPrompt)
-    ]);
+    // Prepare messages for the LLM
+    const messages: Message[] = [
+      { role: MessageRole.System, content: llmConfig.prompts.systemPrompt },
+      { role: MessageRole.User, content: userPrompt }
+    ];
 
-    let enhancedCode = response.content.toString();
+    // Get response from the LLM
+    const enhancedCode = await llmProvider.generate(messages);
+    
     debugLog('Got response from LLM');
 
     // Extract code from markdown code blocks if present
-    if (enhancedCode.includes('```')) {
+    let finalCode = enhancedCode;
+    if (finalCode.includes('```')) {
       const codeBlockRegex = /```(?:javascript|js)?\n([\s\S]*?)```/;
-      const match = enhancedCode.match(codeBlockRegex);
+      const match = finalCode.match(codeBlockRegex);
       if (match && match[1]) {
-        enhancedCode = match[1].trim();
+        finalCode = match[1].trim();
         debugLog('Extracted code from markdown code block');
       }
     }
 
     // Cache the result for future use
-    processedActionCache.set(actionKey, enhancedCode);
+    processedActionCache.set(actionKey, finalCode);
     debugLog(`Cached result for action: ${action.name}`);
 
-    return enhancedCode;
+    return finalCode;
   } catch (error) {
     process.stderr.write(`Error enhancing code with LLM: ${error}\n`);
     debugLog(`Full error details: ${error && (error as Error).stack}`);
@@ -151,57 +139,70 @@ export async function enhanceCompleteScript(
     process.stdout.write('Enhancing complete test script with LLM...\n');
     debugLog(`Complete script length: ${completeScript.length} characters`);
 
-    // Initialize the chat model with config settings
-    const model = new ChatOllama({
-      baseUrl: llmConfig.ollama.baseUrl,
-      model: llmConfig.ollama.model,
-      temperature: llmConfig.ollama.completeScriptTemperature,
+    // Get temperature from config
+    const temperature = getProviderTemperature('completeScriptTemperature');
+
+    // Process the complete script user prompt template
+    const userPrompt = processTemplate(llmConfig.prompts.completeScriptUserPromptTemplate, {
+      completeScript
     });
-
-    debugLog(`Using Ollama at ${llmConfig.ollama.baseUrl} with model ${llmConfig.ollama.model}`);
-
-    // Prepare a specialized system prompt for the complete script analysis
-    const systemPrompt = llmConfig.prompts.completeScriptSystemPrompt;
-
-    const userPrompt = `Here is a complete Playwright test script that was auto-generated. Please analyze and improve it to make it more robust, maintainable, and reliable:
-
-\`\`\`javascript
-${completeScript}
-\`\`\`
-
-Please provide the complete enhanced test script.`;
 
     debugLog('Sending complete script to LLM...');
 
-    // Get response from the LLM
-    const response = await model.call([
-      new SystemMessage(systemPrompt),
-      new HumanMessage(userPrompt)
-    ]);
+    // Prepare messages for the LLM
+    const messages: Message[] = [
+      { role: MessageRole.System, content: llmConfig.prompts.completeScriptSystemPrompt },
+      { role: MessageRole.User, content: userPrompt }
+    ];
 
-    let enhancedScript = response.content.toString();
+    // Get response from the LLM with higher temperature
+    const enhancedScript = await llmProvider.generate(messages, { temperature });
+    
     debugLog('Got response from LLM for complete script');
 
     // Extract code from markdown code blocks if present
-    if (enhancedScript.includes('```')) {
+    let finalScript = enhancedScript;
+    if (finalScript.includes('```')) {
       const codeBlockRegex = /```(?:javascript|js)?\n([\s\S]*?)```/;
-      const match = enhancedScript.match(codeBlockRegex);
+      const match = finalScript.match(codeBlockRegex);
       if (match && match[1]) {
-        enhancedScript = match[1].trim();
+        finalScript = match[1].trim();
         debugLog('Extracted code from markdown code block');
       }
     }
 
     // Cache the result
-    processedScriptCache.set(scriptHash, enhancedScript);
+    processedScriptCache.set(scriptHash, finalScript);
     debugLog('Cached result for complete script');
 
-    return enhancedScript;
+    return finalScript;
   } catch (error) {
     process.stderr.write(`Error enhancing complete script with LLM: ${error}\n`);
     debugLog(`Full error details: ${error && (error as Error).stack}`);
     // Fall back to original script if there's an error
     return completeScript;
+  }
+}
+
+/**
+ * Helper function to get the appropriate temperature based on provider
+ */
+function getProviderTemperature(type: 'temperature' | 'completeScriptTemperature'): number {
+  const defaultTemp = type === 'temperature' ? 0.2 : 0.7;
+  
+  switch (llmConfig.provider) {
+    case 'ollama':
+      return llmConfig.ollama?.[type] ?? defaultTemp;
+    case 'openai':
+      return llmConfig.openai?.[type] ?? defaultTemp;
+    case 'anthropic':
+      return llmConfig.anthropic?.[type] ?? defaultTemp;
+    case 'azure-openai':
+      return llmConfig.azureOpenai?.[type] ?? defaultTemp;
+    case 'custom':
+      return llmConfig.customProvider?.[type] ?? defaultTemp;
+    default:
+      return defaultTemp;
   }
 }
 
