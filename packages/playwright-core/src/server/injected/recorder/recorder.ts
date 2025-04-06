@@ -232,7 +232,7 @@ class RecordActionTool implements RecorderTool {
   onClick(event: MouseEvent) {
     // in webkit, sliding a range element may trigger a click event with a different target if the mouse is released outside the element bounding box.
     // So we check the hovered element instead, and if it is a range input, we skip click handling
-    console.log('onClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClick');
+    console.log('onClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClick');
     console.log(event);
     
     if (isRangeInput(this._hoveredElement))
@@ -1488,21 +1488,46 @@ function inputValue(target: Element): string {
 }
 
 function getTargetInfo(event: Event): any {
-  // Send this to the main window console to be captured by the Node process
   self.console.log('[Recorder] Getting target info for event:', event.type);
-  const targetElement = (event.target as HTMLElement);
+  
+  // Send detailed debug information to be captured by our monitoring tools
+  const targetElement = event.target as HTMLElement;
   if (!targetElement)
-    return undefined;
-
+    return void 0;
+    
+  // Get more detailed information about the event
+  const eventDetails = {
+    type: event.type,
+    isTrusted: event.isTrusted,
+    bubbles: event.bubbles,
+    cancelable: event.cancelable,
+    timeStamp: event.timeStamp,
+    composed: event.composed
+  };
+  
+  // Get element path information
+  const elementPaths = getElementPaths(targetElement);
+  
+  // Send a custom event that can be captured by Playwright's CDP session
+  const recorderDebug = {
+    pwDebugEvent: true,
+    source: 'recorder',
+    message: `Getting target info for event: ${event.type}`,
+    eventDetails,
+    targetElement: targetElement.tagName,
+    elementPaths
+  };
+  
+  // Use console.debug with a special prefix for easier filtering
+  console.debug('pw:debug:recorder', JSON.stringify(recorderDebug));
+  
   const rect = targetElement.getBoundingClientRect();
   const attributes: Record<string, string> = {};
-
-  // Collect attributes
   for (let i = 0; i < targetElement.attributes.length; i++) {
     const attr = targetElement.attributes[i];
     attributes[attr.name] = attr.value;
   }
-
+  
   const info: any = {
     tagName: targetElement.tagName,
     elementDimensions: {
@@ -1510,7 +1535,8 @@ function getTargetInfo(event: Event): any {
       height: rect.height
     },
     elementAttributes: attributes,
-    elementClasses: targetElement.className
+    elementClasses: targetElement.className,
+    paths: elementPaths
   };
 
   self.console.log('[Recorder] Target element:', info.tagName, 'with classes:', info.elementClasses);
@@ -1527,10 +1553,116 @@ function getTargetInfo(event: Event): any {
       x: rect.width ? (event.offsetX / rect.width) : 0,
       y: rect.height ? (event.offsetY / rect.height) : 0
     };
-    self.console.log('[Recorder] Mouse event position:', info.relativePosition);
   }
 
   return info;
+}
+
+// Helper function to get different path representations for an element
+function getElementPaths(element: Element): { xpath: string, fullXPath: string, jsPath: string, outerHTML: string } {
+  // Get simple XPath (uses id, name, etc. when available)
+  const xpath = getXPath(element, false);
+  
+  // Get full XPath (always uses position-based path)
+  const fullXPath = getXPath(element, true);
+  
+  // Get JS Path (document.querySelector style path)
+  const jsPath = getJSPath(element);
+  
+  // Get the outerHTML (limited to reasonable size to avoid huge objects)
+  const outerHTML = getOuterHTMLSample(element);
+
+  // console.log('xpath', xpath);
+  // console.log('fullXPath', fullXPath);
+  // console.log('jsPath', jsPath);
+  // console.log('outerHTML', outerHTML);
+  
+  return { xpath, fullXPath, jsPath, outerHTML };
+}
+
+// Function to generate XPath for an element
+function getXPath(element: Element, full: boolean): string {
+  if (element.nodeType !== Node.ELEMENT_NODE)
+    return '';
+  
+  // For the simple XPath version, try to use id or other distinctive attributes
+  if (!full) {
+    if (element.id)
+      return `//*[@id="${element.id}"]`;
+    if (element.getAttribute('name'))
+      return `//${element.nodeName.toLowerCase()}[@name="${element.getAttribute('name')}"]`;
+  }
+  
+  // Get the path to the element
+  const paths = [];
+  let current: Element | null = element;
+  
+  while (current && current.nodeType === Node.ELEMENT_NODE) {
+    let index = 0;
+    let hasFollowingSiblings = false;
+    for (let sibling = current.previousSibling; sibling; sibling = sibling.previousSibling) {
+      if (sibling.nodeType !== Node.ELEMENT_NODE)
+        continue;
+      if (sibling.nodeName === current.nodeName)
+        index++;
+    }
+    
+    hasFollowingSiblings = false;
+    for (let sibling = current.nextSibling; sibling && !hasFollowingSiblings; sibling = sibling.nextSibling) {
+      if (sibling.nodeName === current.nodeName)
+        hasFollowingSiblings = true;
+    }
+    
+    const tagName = current.nodeName.toLowerCase();
+    const pathIndex = (index || hasFollowingSiblings) ? `[${index + 1}]` : '';
+    paths.unshift(tagName + pathIndex);
+    
+    current = current.parentElement;
+  }
+  
+  return '/' + paths.join('/');
+}
+
+// Function to generate JS Path for an element
+function getJSPath(element: Element): string {
+  if (element.id)
+    return `document.getElementById('${element.id}')`;
+  
+  if (!element.parentElement)
+    return 'document.documentElement';
+  
+  let current = element;
+  let path = '';
+  
+  while (current && current.parentElement) {
+    let index = 0;
+    for (let sibling = current.previousElementSibling; sibling; sibling = sibling.previousElementSibling) {
+      if (sibling.nodeName === current.nodeName)
+        index++;
+    }
+    
+    const tag = current.nodeName.toLowerCase();
+    path = `.children[${Array.from(current.parentElement.children).indexOf(current)}]${path}`;
+    current = current.parentElement;
+    
+    if (current.id) {
+      path = `document.getElementById('${current.id}')${path}`;
+      break;
+    }
+  }
+  
+  return path || 'document.documentElement';
+}
+
+// Get a sample of the outerHTML to avoid extremely large strings
+function getOuterHTMLSample(element: Element): string {
+  const html = element.outerHTML;
+  const maxLength = 1000; // Limit to 1000 characters to avoid huge objects
+  
+  if (html.length <= maxLength)
+    return html;
+  
+  return html.substring(0, maxLength) + '... [truncated]';
 }
 
 function consumeEvent(e: Event) {

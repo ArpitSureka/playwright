@@ -67,6 +67,25 @@ export async function enhanceWithLLM(
     
     debugLog(`Using Ollama at ${OLLAMA_BASE_URL} with model ${OLLAMA_MODEL}`);
 
+    // Extract element information if available - using optional chaining to avoid type errors
+    const targetInfo = (action as any).targetInfo || {};
+    const elementPaths = targetInfo.paths || {};
+    
+    // Prepare additional element context if available
+    let elementContext = '';
+    if (elementPaths.xpath || elementPaths.fullXPath || elementPaths.jsPath || elementPaths.outerHTML) {
+      elementContext = `
+Element Information:
+- Element Tag: ${targetInfo.tagName || 'Unknown'}
+- Element Classes: ${targetInfo.elementClasses || 'None'}
+- Element Attributes: ${JSON.stringify(targetInfo.elementAttributes || {})}
+- XPath: ${elementPaths.xpath || 'N/A'}
+- Full XPath: ${elementPaths.fullXPath || 'N/A'}
+- JS Path: ${elementPaths.jsPath || 'N/A'}
+- OuterHTML: ${elementPaths.outerHTML || 'N/A'}
+`;
+    }
+
     // Prepare the context for the LLM
     const actionData = JSON.stringify(action, null, 2);
     const systemPrompt = `You are an expert Playwright test developer. Your task is to enhance the generated test code with better comments, error handling, assertions, or any improvements that make the test more robust and maintainable.
@@ -77,20 +96,21 @@ Focus on these aspects:
 3. Additional assertions that verify the expected state
 4. More maintainable code structure
 5. Preserve the existing functionality but make it more robust
-    
+6. Use the provided element information (XPath, JS Path, etc.) to create more robust selectors or fallback selectors when appropriate
+
 Just return the improved code without explanations.`;
 
     const userPrompt = `Here's a Playwright action in JSON format:
 \`\`\`json
 ${actionData}
 \`\`\`
-
+${elementContext}
 Here's the generated code for this action:
 \`\`\`javascript
 ${generatedCode}
 \`\`\`
 
-Please enhance this code to make it more robust and maintainable while preserving its functionality.`;
+Please enhance this code to make it more robust and maintainable while preserving its functionality. When appropriate, consider using the element paths information to create more reliable selectors or fallback mechanisms.`;
 
     debugLog('Sending prompt to LLM...');
     
