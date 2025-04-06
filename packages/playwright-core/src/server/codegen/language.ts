@@ -23,6 +23,9 @@ export async function generateCode(actions: actions.ActionInContext[], languageG
   const header = languageGenerator.generateHeader(options);
   const footer = languageGenerator.generateFooter(options.saveStorage);
   const actionTexts = [];
+  // console.log('asasasasasaaaaaaasasasasasasassaasasasasasasasasasasasasasa')
+  // console.log(actions)
+  // console.log('asasasasasaaaaaaasasasasasasassaasasasasasasasasasasasasasa')
   for (const action of actions) {
     const actionText = await Promise.resolve(languageGenerator.generateAction(action));
     if (actionText)

@@ -275,6 +275,8 @@ export class ContextRecorder extends EventEmitter {
   }
 
   private async _recordAction(frame: Frame, action: actions.Action) {
+    // console.log('qweweerrrwewrerweqwrwqwerwwqqwewrewqwerewe wqeqwew');
+    // console.log(action);
     this._collection.addRecordedAction(await this._createActionInContext(frame, action));
   }
 

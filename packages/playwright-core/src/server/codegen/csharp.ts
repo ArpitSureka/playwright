@@ -115,7 +115,7 @@ export class CSharpLanguageGenerator implements LanguageGenerator {
         if (action.clickCount === 2)
           method = 'DblClick';
         const options = toClickOptionsForSourceCode(action);
-        
+
         // Prepare the click command
         let command;
         if (!Object.entries(options).length)
@@ -124,7 +124,7 @@ export class CSharpLanguageGenerator implements LanguageGenerator {
           const optionsString = formatObject(options, '    ', 'Locator' + method + 'Options');
           command = `await ${subject}.${this._asLocator(action.selector)}.${method}Async(${optionsString});`;
         }
-        
+
         // Include targeting comments if targetInfo is available
         let result = command;
         if (action.targetInfo) {
@@ -139,7 +139,7 @@ export class CSharpLanguageGenerator implements LanguageGenerator {
             result = comments.join('\n') + '\n' + result;
           }
         }
-        
+
         return result;
       }
       case 'check':
@@ -228,6 +228,21 @@ export class CSharpLanguageGenerator implements LanguageGenerator {
       }
       case 'assertSnapshot':
         return `await Expect(${subject}.${this._asLocator(action.selector)}).ToMatchAriaSnapshotAsync(${quote(action.snapshot)});`;
+      case 'screenshot': {
+        const options = (action as actions.ScreenshotAction).options || {};
+        const path = options.path ? `new() { Path = ${quote(options.path)} }` : '';
+        return `await ${subject}.${this._asLocator(action.selector)}.ScreenshotAsync(${path});`;
+      }
+      case 'extractText': {
+        const extractAction = action as actions.ExtractTextAction;
+        const variableName = extractAction.variableName;
+        const contentType = extractAction.contentType;
+        const comments = [`// Extracted ${contentType} from element into variable: ${variableName}`];
+        const extractMethod = contentType === 'text' ? 'TextContentAsync()' : 'InputValueAsync()';
+        return `${comments.join('\n')}\nvar ${variableName} = await ${subject}.${this._asLocator(action.selector)}.${extractMethod};`;
+      }
+      default:
+        throw new Error(`Unknown action: ${(action as any).name}`);
     }
   }
 

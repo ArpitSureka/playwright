@@ -125,7 +125,26 @@ export async function performAction(pageAliases: Map<Page, string>, actionInCont
       timeout: kActionTimeout,
     });
     return;
-  }
+  } 
+
+  
+//  Probably not needed. 
+  // if (action.name === 'screenshot') {
+  //   // For recorder simulation purposes, we just need to acknowledge the action
+  //   // The actual screenshot is handled by the codegen
+  //   console.log(`Taking screenshot for selector: ${selector}`);
+  //   return;
+  // }
+
+  // if (action.name === 'extractText') {
+  //   const extractAction = action as actions.ExtractTextAction;
+  //   if (extractAction.contentType === 'text') {
+  //     await mainFrame.textContent(callMetadata, selector, { timeout: kActionTimeout, strict: true });
+  //   } else {
+  //     await mainFrame.inputValue(callMetadata, selector, { timeout: kActionTimeout, strict: true });
+  //   }
+  //   return;
+  // }
 
   throw new Error('Internal error: unexpected action ' + (action as any).name);
 }

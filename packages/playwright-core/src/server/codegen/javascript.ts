@@ -75,7 +75,11 @@ export class JavaScriptLanguageGenerator implements LanguageGenerator {
     let actionCode = this._generateActionCall(subject, actionInContext);
 
     // Enhance with LLM if enabled
-    if (this._useEnhancer) {
+    console.log('actionInContextactionInContextactionInContextactionInContextactionInContextactionInContextactionInContext')
+    // console.log(actionInContext)
+
+
+    if (this._useEnhancer && actionInContext.action.name !== 'screenshot') {
       try {
         actionCode = await enhanceWithLLM(actionCode, action, actionInContext);
       } catch (error) {
@@ -95,9 +99,10 @@ export class JavaScriptLanguageGenerator implements LanguageGenerator {
 
   private _generateActionCall(subject: string, actionInContext: actions.ActionInContext): string {
     const action = actionInContext.action;
-    console.log('generateActionCall - ', action);
-    console.log('hello world - xox0x0x0x0x0x00x0x0x0x0x0x0x00x0x00x0x00x0x00x0x0x0x0x00x0x0x00x0x0x00x0x0x00x0x');
-    console.log(this._useEnhancer)
+    console.log('generateActionCall - ', JSON.stringify(action, null, 2));
+    // console.log('Action type: ', action.name);
+    // console.log('Action selector: ', (action as any).selector);
+    
     switch (action.name) {
       case 'openPage':
         throw Error('Not reached');
@@ -214,6 +219,22 @@ export class JavaScriptLanguageGenerator implements LanguageGenerator {
         const commentIfNeeded = this._isTest ? '' : '// ';
         return `${commentIfNeeded}await expect(${subject}.${this._asLocator(action.selector)}).toMatchAriaSnapshot(${quoteMultiline(action.snapshot, `${commentIfNeeded}  `)});`;
       }
+      case 'screenshot': {
+        // Make sure we're using the correct property structure for screenshot
+        const options = (action as any).options || {};
+        const path = options.path ? `, { path: ${quote(options.path)} }` : '';
+        return `await ${subject}.${this._asLocator(action.selector)}.screenshot(${path});`;
+      }
+      case 'extractText': {
+        // Make sure we're using the correct property structure for extractText
+        const variableName = (action as any).variableName || 'extractedText';
+        const contentType = (action as any).contentType || 'text';
+        const comments = [`// Extracted ${contentType} from element into variable: ${variableName}`];
+        const extractMethod = contentType === 'text' ? 'textContent()' : 'inputValue()';
+        return `${comments.join('\n')}\nconst ${variableName} = await ${subject}.${this._asLocator(action.selector)}.${extractMethod};`;
+      }
+      default:
+        throw new Error(`Unknown action: ${(action as any).name}`);
     }
   }
 

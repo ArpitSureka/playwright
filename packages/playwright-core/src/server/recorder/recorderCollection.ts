@@ -57,10 +57,15 @@ export class RecorderCollection extends EventEmitter {
       this._fireChange();
       return;
     }
+    // console.log('euirbirefberbifuerwuifjwbeuicuewbcwejcbwecuejwchiwecewc')
     this._addAction(actionInContext).catch(() => {});
   }
 
   private async _addAction(actionInContext: actions.ActionInContext, callback?: () => Promise<void>) {
+
+    console.log(actionInContext);
+    console.log(this._enabled);
+
     if (!this._enabled)
       return;
     if (actionInContext.action.name === 'openPage' || actionInContext.action.name === 'closePage') {
@@ -68,6 +73,9 @@ export class RecorderCollection extends EventEmitter {
       this._fireChange();
       return;
     }
+
+    // console.log('derbuierbuorboefurf wqeqwew');
+    // console.log(actionInContext);
 
     this._actions.push(actionInContext);
     this._fireChange();

@@ -14,11 +14,9 @@
  * limitations under the License.
  */
 
-// import { ChatOllama } from 'langchain/chat_models/ollama';
 import { ChatOllama } from '@langchain/ollama';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 
-// import { HumanMessage, SystemMessage } from 'langchain/schema';
 
 import type * as actions from '@recorder/actions';
 
@@ -41,14 +39,14 @@ function debugLog(message: string) {
 }
 
 export async function enhanceWithLLM(
-  generatedCode: string, 
-  action: actions.Action, 
+  generatedCode: string,
+  action: actions.Action,
   actionContext: actions.ActionInContext
 ): Promise<string> {
   try {
     // Create a unique key for this action to avoid duplicate processing
     const actionKey = `${action.name}_${JSON.stringify(action)}_${actionContext.startTime}`;
-    
+
     // Check if we've already processed this action
     if (processedActionCache.has(actionKey)) {
       debugLog(`Using cached result for action: ${action.name}`);
@@ -57,20 +55,20 @@ export async function enhanceWithLLM(
 
     process.stdout.write(`Enhancing code with LLM for action: ${action.name}\n`);
     debugLog(`Full action data: ${JSON.stringify(action, null, 2)}`);
-    
+
     // Initialize the chat model
     const model = new ChatOllama({
       baseUrl: OLLAMA_BASE_URL,
       model: OLLAMA_MODEL,
       temperature: 0.7,
     });
-    
+
     debugLog(`Using Ollama at ${OLLAMA_BASE_URL} with model ${OLLAMA_MODEL}`);
 
     // Extract element information if available - using optional chaining to avoid type errors
     const targetInfo = (action as any).targetInfo || {};
     const elementPaths = targetInfo.paths || {};
-    
+
     // Prepare additional element context if available
     let elementContext = '';
     if (elementPaths.xpath || elementPaths.fullXPath || elementPaths.jsPath || elementPaths.outerHTML) {
@@ -113,7 +111,7 @@ ${generatedCode}
 Please enhance this code to make it more robust and maintainable while preserving its functionality. When appropriate, consider using the element paths information to create more reliable selectors or fallback mechanisms.`;
 
     debugLog('Sending prompt to LLM...');
-    
+
     // Get response from the LLM
     const response = await model.call([
       new SystemMessage(systemPrompt),
@@ -122,7 +120,7 @@ Please enhance this code to make it more robust and maintainable while preservin
 
     let enhancedCode = response.content.toString();
     debugLog('Got response from LLM');
-    
+
     // Extract code from markdown code blocks if present
     if (enhancedCode.includes('```')) {
       const codeBlockRegex = /```(?:javascript|js)?\n([\s\S]*?)```/;
@@ -136,7 +134,7 @@ Please enhance this code to make it more robust and maintainable while preservin
     // Cache the result for future use
     processedActionCache.set(actionKey, enhancedCode);
     debugLog(`Cached result for action: ${action.name}`);
-    
+
     return enhancedCode;
   } catch (error) {
     process.stderr.write(`Error enhancing code with LLM: ${error}\n`);
@@ -154,7 +152,7 @@ export async function enhanceCompleteScript(
   try {
     // Create a unique hash for this script to avoid duplicates
     const scriptHash = hashString(completeScript);
-    
+
     // Check if we've already processed this script
     if (processedScriptCache.has(scriptHash)) {
       debugLog('Using cached result for complete script');
@@ -163,14 +161,14 @@ export async function enhanceCompleteScript(
 
     process.stdout.write('Enhancing complete test script with LLM...\n');
     debugLog(`Complete script length: ${completeScript.length} characters`);
-    
+
     // Initialize the chat model
     const model = new ChatOllama({
       baseUrl: OLLAMA_BASE_URL,
       model: OLLAMA_MODEL,
       temperature: 0.7,
     });
-    
+
     debugLog(`Using Ollama at ${OLLAMA_BASE_URL} with model ${OLLAMA_MODEL}`);
 
     // Prepare a specialized system prompt for the complete script analysis
@@ -198,7 +196,7 @@ ${completeScript}
 Please provide the complete enhanced test script.`;
 
     debugLog('Sending complete script to LLM...');
-    
+
     // Get response from the LLM
     const response = await model.call([
       new SystemMessage(systemPrompt),
@@ -207,7 +205,7 @@ Please provide the complete enhanced test script.`;
 
     let enhancedScript = response.content.toString();
     debugLog('Got response from LLM for complete script');
-    
+
     // Extract code from markdown code blocks if present
     if (enhancedScript.includes('```')) {
       const codeBlockRegex = /```(?:javascript|js)?\n([\s\S]*?)```/;
@@ -221,7 +219,7 @@ Please provide the complete enhanced test script.`;
     // Cache the result
     processedScriptCache.set(scriptHash, enhancedScript);
     debugLog('Cached result for complete script');
-    
+
     return enhancedScript;
   } catch (error) {
     process.stderr.write(`Error enhancing complete script with LLM: ${error}\n`);

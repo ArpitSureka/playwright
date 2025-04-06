@@ -201,6 +201,19 @@ export class PythonLanguageGenerator implements LanguageGenerator {
       }
       case 'assertSnapshot':
         return `expect(${subject}.${this._asLocator(action.selector)}).to_match_aria_snapshot(${quote(action.snapshot)})`;
+      case 'screenshot': {
+        const options = action.options ? formatOptions(action.options, false) : '';
+        return `await ${subject}.${this._asLocator(action.selector)}.screenshot(${options});`;
+      }
+      case 'extractText': {
+        const variableName = action.variableName;
+        const contentType = action.contentType;
+        const comments = [`// Extracted ${contentType} from element into variable: ${variableName}`];
+        const extractMethod = contentType === 'text' ? 'textContent()' : 'inputValue()';
+        return `${comments.join('\n')}\nconst ${variableName} = await ${subject}.${this._asLocator(action.selector)}.${extractMethod};`;
+      }
+      default:
+        throw new Error(`Unknown action: ${(action as any).name}`);
     }
   }
 
@@ -354,7 +367,7 @@ class PythonFormatter {
         return;
       }
 
-      line = spaces  + line;
+      line = spaces + line;
       if (line.endsWith('{')) {
         spaces += this._baseIndent;
         line = line.substring(0, line.length - 1).trimEnd() + ':';

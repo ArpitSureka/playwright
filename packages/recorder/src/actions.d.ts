@@ -31,7 +31,9 @@ export type ActionName =
   'assertValue' |
   'assertChecked' |
   'assertVisible' |
-  'assertSnapshot';
+  'assertSnapshot' |
+  'screenshot' |
+  'extractText';
 
 export type ActionBase = {
   name: ActionName,
@@ -160,9 +162,24 @@ export type AssertSnapshotAction = ActionWithSelector & {
   snapshot: string,
 };
 
-export type Action = ClickAction | CheckAction | ClosesPageAction | OpenPageAction | UncheckAction | FillAction | NavigateAction | PressAction | SelectAction | SetInputFilesAction | AssertTextAction | AssertValueAction | AssertCheckedAction | AssertVisibleAction | AssertSnapshotAction;
+export type ScreenshotAction = ActionWithSelector & {
+  name: 'screenshot',
+  options: {
+    path: string,
+    fullPage: boolean
+  }
+};
+
+export type ExtractTextAction = ActionWithSelector & {
+  name: 'extractText',
+  variableName: string,
+  extractedContent: string,
+  contentType: 'text' | 'value'
+};
+
+export type Action = ClickAction | CheckAction | ClosesPageAction | OpenPageAction | UncheckAction | FillAction | NavigateAction | PressAction | SelectAction | SetInputFilesAction | AssertTextAction | AssertValueAction | AssertCheckedAction | AssertVisibleAction | AssertSnapshotAction | ScreenshotAction | ExtractTextAction;
 export type AssertAction = AssertCheckedAction | AssertValueAction | AssertTextAction | AssertVisibleAction | AssertSnapshotAction;
-export type PerformOnRecordAction = ClickAction | CheckAction | UncheckAction | PressAction | SelectAction;
+export type PerformOnRecordAction = ClickAction | CheckAction | UncheckAction | PressAction | SelectAction | ScreenshotAction | ExtractTextAction;
 
 // Signals.
 

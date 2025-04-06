@@ -32,6 +32,11 @@ export interface RecorderDelegate {
   highlightUpdated?(): void;
 }
 
+enum ContentTypeEnum {
+  text='text',
+  value='value'
+}
+
 interface RecorderTool {
   cursor(): string;
   cleanup?(): void;
@@ -232,8 +237,8 @@ class RecordActionTool implements RecorderTool {
   onClick(event: MouseEvent) {
     // in webkit, sliding a range element may trigger a click event with a different target if the mouse is released outside the element bounding box.
     // So we check the hovered element instead, and if it is a range input, we skip click handling
-    console.log('onClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClick');
-    console.log(event);
+    // console.log('onClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClickonClick');
+    // console.log(event);
     
     if (isRangeInput(this._hoveredElement))
       return;
@@ -838,6 +843,8 @@ class Overlay {
   private _assertTextToggle: HTMLElement;
   private _assertValuesToggle: HTMLElement;
   private _assertSnapshotToggle: HTMLElement;
+  private _screenshotToggle: HTMLElement;
+  private _extractTextToggle: HTMLElement;
   private _offsetX = 0;
   private _dragState: { offsetX: number, dragStart: { x: number, y: number } } | undefined;
   private _measure: { width: number, height: number } = { width: 0, height: 0 };
@@ -886,8 +893,22 @@ class Overlay {
     this._assertSnapshotToggle = this._recorder.document.createElement('x-pw-tool-item');
     this._assertSnapshotToggle.title = 'Assert snapshot';
     this._assertSnapshotToggle.classList.add('snapshot');
-    this._assertSnapshotToggle.appendChild(this._recorder.document.createElement('x-div'));
-    toolsListElement.appendChild(this._assertSnapshotToggle);
+    // this._assertSnapshotToggle.appendChild(this._recorder.document.createElement('x-div'));
+    // toolsListElement.appendChild(this._assertSnapshotToggle);
+
+    // Add the screenshot button
+    this._screenshotToggle = this._recorder.document.createElement('x-pw-tool-item');
+    this._screenshotToggle.title = 'Take screenshot';
+    this._screenshotToggle.classList.add('screenshot');
+    this._screenshotToggle.appendChild(this._recorder.document.createElement('x-div'));
+    toolsListElement.appendChild(this._screenshotToggle);
+
+    // Add the extract text button
+    this._extractTextToggle = this._recorder.document.createElement('x-pw-tool-item');
+    this._extractTextToggle.title = 'Extract text/value';
+    this._extractTextToggle.classList.add('extract-text');
+    this._extractTextToggle.appendChild(this._recorder.document.createElement('x-div'));
+    toolsListElement.appendChild(this._extractTextToggle);
 
     this._updateVisualPosition();
     this._refreshListeners();
@@ -917,6 +938,8 @@ class Overlay {
           'assertingVisibility': 'recording-inspecting',
           'assertingValue': 'recording-inspecting',
           'assertingSnapshot': 'recording-inspecting',
+          'takingScreenshot': 'recording-inspecting',
+          'extractingText': 'recording-inspecting'
         };
         this._recorder.setMode(newMode[this._recorder.state.mode]);
       }),
@@ -936,6 +959,17 @@ class Overlay {
         if (!this._assertSnapshotToggle.classList.contains('disabled'))
           this._recorder.setMode(this._recorder.state.mode === 'assertingSnapshot' ? 'recording' : 'assertingSnapshot');
       }),
+      // Add listener for screenshot button
+      addEventListener(this._screenshotToggle, 'click', () => {
+        // console.log('takingScreenshotclicked');
+        if (!this._screenshotToggle.classList.contains('disabled'))
+          this._recorder.setMode(this._recorder.state.mode === 'takingScreenshot' ? 'recording' : 'takingScreenshot');
+      }),
+      // Add listener for extract text button
+      addEventListener(this._extractTextToggle, 'click', () => {
+        if (!this._extractTextToggle.classList.contains('disabled'))
+          this._recorder.setMode(this._recorder.state.mode === 'extractingText' ? 'recording' : 'extractingText');
+      }),
     ];
   }
 
@@ -950,7 +984,7 @@ class Overlay {
   }
 
   setUIState(state: UIState) {
-    this._recordToggle.classList.toggle('toggled', state.mode === 'recording' || state.mode === 'assertingText' || state.mode === 'assertingVisibility' || state.mode === 'assertingValue' || state.mode === 'assertingSnapshot' || state.mode === 'recording-inspecting');
+    this._recordToggle.classList.toggle('toggled', state.mode === 'recording' || state.mode === 'assertingText' || state.mode === 'assertingVisibility' || state.mode === 'assertingValue' || state.mode === 'assertingSnapshot' || state.mode === 'recording-inspecting' || state.mode === 'takingScreenshot' || state.mode === 'extractingText');
     this._pickLocatorToggle.classList.toggle('toggled', state.mode === 'inspecting' || state.mode === 'recording-inspecting');
     this._assertVisibilityToggle.classList.toggle('toggled', state.mode === 'assertingVisibility');
     this._assertVisibilityToggle.classList.toggle('disabled', state.mode === 'none' || state.mode === 'standby' || state.mode === 'inspecting');
@@ -960,6 +994,15 @@ class Overlay {
     this._assertValuesToggle.classList.toggle('disabled', state.mode === 'none' || state.mode === 'standby' || state.mode === 'inspecting');
     this._assertSnapshotToggle.classList.toggle('toggled', state.mode === 'assertingSnapshot');
     this._assertSnapshotToggle.classList.toggle('disabled', state.mode === 'none' || state.mode === 'standby' || state.mode === 'inspecting');
+    
+    // Set toggle state for screenshot button
+    this._screenshotToggle.classList.toggle('toggled', state.mode === 'takingScreenshot');
+    this._screenshotToggle.classList.toggle('disabled', state.mode === 'none' || state.mode === 'standby' || state.mode === 'inspecting');
+    
+    // Set toggle state for extract text button
+    this._extractTextToggle.classList.toggle('toggled', state.mode === 'extractingText');
+    this._extractTextToggle.classList.toggle('disabled', state.mode === 'none' || state.mode === 'standby' || state.mode === 'inspecting');
+    
     if (this._offsetX !== state.overlay.offsetX) {
       this._offsetX = state.overlay.offsetX;
       this._updateVisualPosition();
@@ -970,12 +1013,16 @@ class Overlay {
       this._showOverlay();
   }
 
-  flashToolSucceeded(tool: 'assertingVisibility' | 'assertingSnapshot' | 'assertingValue') {
+  flashToolSucceeded(tool: 'assertingVisibility' | 'assertingSnapshot' | 'assertingValue' | 'takingScreenshot' | 'extractingText') {
     let element: Element;
     if (tool === 'assertingVisibility')
       element = this._assertVisibilityToggle;
     else if (tool === 'assertingSnapshot')
       element = this._assertSnapshotToggle;
+    else if (tool === 'takingScreenshot')
+      element = this._screenshotToggle;
+    else if (tool === 'extractingText')
+      element = this._extractTextToggle;
     else
       element = this._assertValuesToggle;
     element.classList.add('succeeded');
@@ -1070,6 +1117,8 @@ export class Recorder {
       'assertingVisibility': new InspectTool(this, true),
       'assertingValue': new TextAssertionTool(this, 'value'),
       'assertingSnapshot': new TextAssertionTool(this, 'snapshot'),
+      'takingScreenshot': new ScreenshotTool(this),
+      'extractingText': new ExtractTextTool(this)
     };
     this._currentTool = this._tools.none;
     if (injectedScript.window.top === injectedScript.window) {
@@ -1488,7 +1537,7 @@ function inputValue(target: Element): string {
 }
 
 function getTargetInfo(event: Event): any {
-  self.console.log('[Recorder] Getting target info for event:', event.type);
+  // self.console.log('[Recorder] Getting target info for event:', event.type);
   
   // Send detailed debug information to be captured by our monitoring tools
   const targetElement = event.target as HTMLElement;
@@ -1539,7 +1588,7 @@ function getTargetInfo(event: Event): any {
     paths: elementPaths
   };
 
-  self.console.log('[Recorder] Target element:', info.tagName, 'with classes:', info.elementClasses);
+  // self.console.log('[Recorder] Target element:', info.tagName, 'with classes:', info.elementClasses);
 
   // Add input type for form elements
   if (targetElement.tagName === 'INPUT')
@@ -1742,4 +1791,195 @@ function createSvgElement(doc: Document, { tagName, attrs, children }: SvgJson):
   }
 
   return elem;
+}
+
+class ScreenshotTool implements RecorderTool {
+  private _recorder: Recorder;
+  private _hoverHighlight: HighlightModelWithSelector | null = null;
+  private _selectedElement: Element | null = null;
+
+  constructor(recorder: Recorder) {
+    this._recorder = recorder;
+  }
+
+  cursor() {
+    return 'pointer';
+  }
+
+  cleanup() {
+    this._hoverHighlight = null;
+    this._selectedElement = null;
+  }
+
+  onClick(event: MouseEvent) {
+    consumeEvent(event);
+    
+    if (!this._selectedElement || !this._hoverHighlight)
+      return;
+    
+    // Create a unique filename based on the element and timestamp
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const elementType = this._selectedElement.tagName.toLowerCase();
+    const filename = `screenshot-${elementType}-${timestamp}.png`;
+    
+    console.debug('pw:debug:recorder', JSON.stringify({
+      pwDebugEvent: true,
+      source: 'recorder',
+      message: `Taking screenshot of element: ${elementType}`,
+      action: 'screenshot',
+      selector: this._hoverHighlight.selector,
+      filename: filename
+    }));
+    
+    // Record the screenshot action
+    this._recorder.recordAction({
+      name: 'screenshot',
+      selector: this._hoverHighlight.selector,
+      signals: [],
+      options: {
+        path: filename,
+        fullPage: false
+      }
+    });
+    
+    this._recorder.setMode('recording');
+    this._recorder.overlay?.flashToolSucceeded('takingScreenshot');
+  }
+
+  onMouseMove(event: MouseEvent) {
+    const target = this._recorder.deepEventTarget(event);
+    if (this._hoverHighlight?.elements[0] === target)
+      return;
+    
+    this._selectedElement = target;
+    const result = this._recorder.injectedScript.generateSelector(target, { testIdAttributeName: this._recorder.state.testIdAttributeName });
+    this._hoverHighlight = result && result.selector ? { ...result, color: '#ffcc00aa' } : null;
+    
+    this._recorder.updateHighlight(this._hoverHighlight, true);
+  }
+
+  onKeyDown(event: KeyboardEvent) {
+    if (event.key === 'Escape') {
+      this._recorder.setMode('recording');
+    }
+    consumeEvent(event);
+  }
+
+  onPointerDown(event: PointerEvent) {
+    consumeEvent(event);
+  }
+
+  onMouseDown(event: MouseEvent) {
+    consumeEvent(event);
+  }
+}
+
+class ExtractTextTool implements RecorderTool {
+  private _recorder: Recorder;
+  private _hoverHighlight: HighlightModelWithSelector | null = null;
+  private _selectedElement: Element | null = null;
+  private _variableCounter = 0;
+
+  constructor(recorder: Recorder) {
+    this._recorder = recorder;
+  }
+
+  cursor() {
+    return 'pointer';
+  }
+
+  cleanup() {
+    this._hoverHighlight = null;
+    this._selectedElement = null;
+  }
+
+  onClick(event: MouseEvent) {
+    consumeEvent(event);
+    
+    if (!this._selectedElement || !this._hoverHighlight)
+      return;
+    
+    // Try to extract text content first, then fall back to value
+    const element = this._selectedElement;
+    let extractedContent = '';
+    let contentType: ContentTypeEnum = ContentTypeEnum.text;
+    
+    // Check if the element has visible text content
+    const textContent = element.textContent?.trim();
+    
+    if (textContent && textContent.length > 0) {
+      extractedContent = textContent;
+      contentType = ContentTypeEnum.text;
+    } else {
+      // Check if it's an input, select, or textarea with a value
+      if (element instanceof HTMLInputElement || 
+          element instanceof HTMLTextAreaElement ||
+          element instanceof HTMLSelectElement) {
+        extractedContent = element.value;
+        contentType = ContentTypeEnum.value;
+      }
+    }
+    
+    // If no content was found, show a message
+    if (!extractedContent) {
+      console.debug('pw:debug:recorder', JSON.stringify({
+        pwDebugEvent: true,
+        source: 'recorder',
+        message: 'No text or value found in the selected element',
+        element: element.tagName
+      }));
+      return;
+    }
+    
+    // Create a variable name based on the element type and content
+    const elementType = element.tagName.toLowerCase();
+    const variableName = `extracted${elementType.charAt(0).toUpperCase() + elementType.slice(1)}${++this._variableCounter}`;
+    
+    console.debug('pw:debug:recorder', JSON.stringify({
+      pwDebugEvent: true,
+      source: 'recorder',
+      message: `Extracted ${contentType}: "${extractedContent}" into variable ${variableName}`,
+      element: element.tagName
+    }));
+    
+    // Record the extraction action
+    this._recorder.recordAction({
+      name: 'extractText',
+      selector: this._hoverHighlight.selector,
+      signals: [],
+      variableName,
+      extractedContent,
+      contentType
+    });
+    
+    this._recorder.setMode('recording');
+    this._recorder.overlay?.flashToolSucceeded('extractingText');
+  }
+
+  onMouseMove(event: MouseEvent) {
+    const target = this._recorder.deepEventTarget(event);
+    if (this._hoverHighlight?.elements[0] === target)
+      return;
+    
+    this._selectedElement = target;
+    const result = this._recorder.injectedScript.generateSelector(target, { testIdAttributeName: this._recorder.state.testIdAttributeName });
+    this._hoverHighlight = result && result.selector ? { ...result, color: '#00ccffaa' } : null;
+    
+    this._recorder.updateHighlight(this._hoverHighlight, true);
+  }
+
+  onKeyDown(event: KeyboardEvent) {
+    if (event.key === 'Escape') {
+      this._recorder.setMode('recording');
+    }
+    consumeEvent(event);
+  }
+
+  onPointerDown(event: PointerEvent) {
+    consumeEvent(event);
+  }
+
+  onMouseDown(event: MouseEvent) {
+    consumeEvent(event);
+  }
 }

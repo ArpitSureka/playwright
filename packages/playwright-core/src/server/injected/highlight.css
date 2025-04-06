@@ -232,6 +232,34 @@ x-pw-tool-item.snapshot > x-div {
   clip-path: url(#icon-gist);
 }
 
+x-pw-tool-item.screenshot > x-div {
+  /* Use a camera icon style */
+  clip-path: url(#icon-gist);
+  background-color: #009688;
+}
+
+x-pw-tool-item.screenshot.toggled {
+  background-color: rgba(0, 150, 136, 0.3);
+}
+
+x-pw-tool-item.screenshot:not(.disabled):hover {
+  background-color: rgba(0, 150, 136, 0.2);
+}
+
+x-pw-tool-item.extract-text > x-div {
+  /* Text extraction icon */
+  clip-path: url(#icon-pass);
+  background-color: #2196F3;
+}
+
+x-pw-tool-item.extract-text.toggled {
+  background-color: rgba(33, 150, 243, 0.3);
+}
+
+x-pw-tool-item.extract-text:not(.disabled):hover {
+  background-color: rgba(33, 150, 243, 0.2);
+}
+
 x-pw-tool-item.accept > x-div {
   clip-path: url(#icon-check);
 }

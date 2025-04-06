@@ -105,7 +105,7 @@ export class JavaLanguageGenerator implements LanguageGenerator {
           method = 'dblclick';
         const options = toClickOptionsForSourceCode(action);
         const optionsText = formatClickOptions(options);
-        
+
         // Include targeting comments if targetInfo is available
         let result = `${subject}.${this._asLocator(action.selector, inFrameLocator)}.${method}(${optionsText});`;
         if (action.targetInfo) {
@@ -120,7 +120,7 @@ export class JavaLanguageGenerator implements LanguageGenerator {
             result = comments.join('\n') + '\n' + result;
           }
         }
-        
+
         return result;
       }
       case 'check':
@@ -209,6 +209,21 @@ export class JavaLanguageGenerator implements LanguageGenerator {
       }
       case 'assertSnapshot':
         return `assertThat(${subject}.${this._asLocator(action.selector, inFrameLocator)}).matchesAriaSnapshot(${quote(action.snapshot)});`;
+      case 'screenshot': {
+        const options = (action as actions.ScreenshotAction).options || {};
+        const path = options.path ? `new Locator.ScreenshotOptions().setPath(Paths.get(${quote(options.path)}))` : '';
+        return `${subject}.${this._asLocator(action.selector, inFrameLocator)}.screenshot(${path});`;
+      }
+      case 'extractText': {
+        const extractAction = action as actions.ExtractTextAction;
+        const variableName = extractAction.variableName;
+        const contentType = extractAction.contentType;
+        const comments = [`// Extracted ${contentType} from element into variable: ${variableName}`];
+        const extractMethod = contentType === 'text' ? 'textContent()' : 'inputValue()';
+        return `${comments.join('\n')}\nString ${variableName} = ${subject}.${this._asLocator(action.selector, inFrameLocator)}.${extractMethod};`;
+      }
+      default:
+        throw new Error(`Unknown action: ${(action as any).name}`);
     }
   }
 
