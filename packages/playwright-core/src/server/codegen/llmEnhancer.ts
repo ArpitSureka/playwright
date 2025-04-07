@@ -23,16 +23,13 @@ import type * as actions from '@recorder/actions';
 // Cache to ensure we don't process the same action multiple times
 const processedActionCache = new Map<string, string>();
 
-// Cache for complete scripts to avoid processing the same script multiple times
-const processedScriptCache = new Map<string, string>();
-
 // LLM configuration
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3';
 const DEBUG_LLM = process.env.PW_DEBUG_LLM === '1';
 
 // Helper function for logging that respects the debug flag
-function debugLog(message: string) {
+export function debugLog(message: string) {
   if (DEBUG_LLM)
     process.stdout.write(`[LLM Debug] ${message}\n`);
 }
@@ -46,22 +43,26 @@ export async function enhanceWithLLM(
   action: actions.Action,
   actionContext: actions.ActionInContext
 ): Promise<string> {
+  const startTime = Date.now();
   try {
-    // Create a unique key for this action to avoid duplicate processing
-
-    // Removing position if present
-    let action_modified = action;
-    if ('position' in action_modified) delete action_modified['position'];
-
+    const requestId = Math.random().toString(36).substring(2, 10);
 
     const actionKey = `${action.name}_${actionContext.startTime}`;
 
     // Check if we've already processed this action
     if (processedActionCache.has(actionKey)) {
-      debugLog(`Using cached result for action: ${action.name}`);
+      debugLog(`[Performance] Using cached result for action: ${action.name} (${Date.now() - startTime}ms)`);
       return processedActionCache.get(actionKey)!;
     }
 
+    // Create a unique key for this action to avoid duplicate processing
+    debugLog(`[Performance][${requestId}] Starting LLM enhancement for action: ${action.name}`);
+
+    // Removing position if present
+    let action_modified = action;
+    if ('position' in action_modified) delete action_modified['position'];
+
+    debugLog(`[Performance] Initializing Ollama model (${Date.now() - startTime}ms)`);
     // Initialize the chat model
     const model = new ChatOllama({
       baseUrl: OLLAMA_BASE_URL,
@@ -70,13 +71,10 @@ export async function enhanceWithLLM(
       numPredict: 500
     });
 
-    debugLog(`Using Ollama at ${OLLAMA_BASE_URL} with model ${OLLAMA_MODEL}`);
-
+    debugLog(`[Performance] Preparing element context (${Date.now() - startTime}ms)`);
     // Extract element information if available - using optional chaining to avoid type errors
     const targetInfo = (action_modified as any).targetInfo || {};
     const elementPaths = targetInfo.paths || {};
-
-
 
     // Prepare additional element context if available
     let elementContext = '';
@@ -119,16 +117,13 @@ Element Information:
       }
     }
 
+    debugLog(`[Performance] Preparing prompts (${Date.now() - startTime}ms)`);
     // Convert action to string before modifying it for element context
     const actionData = JSON.stringify(action_modified, null, 2);
 
     process.stdout.write(`Enhancing code with LLM for action: ${action.name}\n`);
-    debugLog(`Full action data: ${actionData}`);
-    debugLog(`Full action data: ${generatedCode}`);
-    // debugLog(`Full action data: ${actionContext}`);
 
     // Prepare the context for the LLM
-
     const systemPrompt = `You are a seasoned Playwright test automation expert. Your task is to transform individual action instructions into robust, production-ready JavaScript code. Each action will be provided sequentially, and your output for each should be modular, clean, and mergeable into a complete test suite. Follow these guidelines precisely:
 
 1. **Coordinate Avoidance**
@@ -168,22 +163,20 @@ Here's the generated code for this action:
 ${generatedCode}
 \`\`\`
 random_word - ${randomWord()}, ${randomWord()}, ${randomWord()}
-
 `;
 
-    debugLog('Sending prompt to LLM...');
-    const start = Date.now();
+    debugLog(`[Performance][${requestId}] Sending request to LLM (${Date.now() - startTime}ms)`);
 
     // Get response from the LLM
+    const llmStartTime = Date.now();
     const response = await model.invoke([
       new SystemMessage(systemPrompt),
       new HumanMessage(userPrompt)
     ]);
+    debugLog(`[Performance][${requestId}] Received LLM response (${Date.now() - llmStartTime}ms)`);
 
     let enhancedCode = response.content.toString();
-    const end = Date.now();
-    const timeTaken = end - start;
-    debugLog(`Got response from LLM : ${timeTaken} ms`);
+    debugLog(`[Performance] Processing LLM response (${Date.now() - startTime}ms)`);
 
     // Extract code from markdown code blocks if present
     if (enhancedCode.includes('```')) {
@@ -191,17 +184,18 @@ random_word - ${randomWord()}, ${randomWord()}, ${randomWord()}
       const match = enhancedCode.match(codeBlockRegex);
       if (match && match[1]) {
         enhancedCode = match[1].trim();
-        debugLog('Extracted code from markdown code block');
+        debugLog(`[Performance] Extracted code from markdown (${Date.now() - startTime}ms)`);
       }
     }
 
     // Cache the result for future use
     processedActionCache.set(actionKey, enhancedCode);
-    debugLog(`Cached result for action: ${action.name}`);
+    debugLog(`[Performance] Cached result for action: ${action.name} (${Date.now() - startTime}ms)`);
 
     return enhancedCode;
   } catch (error) {
     process.stderr.write(`Error enhancing code with LLM: ${error}\n`);
+    debugLog(`[Performance] Error occurred after ${Date.now() - startTime}ms`);
     debugLog(`Full error details: ${error && (error as Error).stack}`);
     // Fall back to original code if there's an error
     return generatedCode;
@@ -214,14 +208,6 @@ export async function enhanceCompleteScript(
   actions: actions.ActionInContext[]
 ): Promise<string> {
   try {
-    // Create a unique hash for this script to avoid duplicates
-    const scriptHash = hashString(completeScript);
-
-    // Check if we've already processed this script
-    if (processedScriptCache.has(scriptHash)) {
-      debugLog('Using cached result for complete script');
-      return processedScriptCache.get(scriptHash)!;
-    }
 
     process.stdout.write('Enhancing complete test script with LLM...\n');
     debugLog(`Complete script length: ${completeScript.length} characters`);
@@ -284,10 +270,6 @@ Please provide the complete enhanced test script.`;
         debugLog('Extracted code from markdown code block');
       }
     }
-
-    // Cache the result
-    processedScriptCache.set(scriptHash, enhancedScript);
-    debugLog('Cached result for complete script');
 
     return enhancedScript;
   } catch (error) {

@@ -174,29 +174,61 @@ export class ContextRecorder extends EventEmitter {
         },
         startTime: monotonicTime()
       });
+
+      console.log('this._enhanceFullScript', this._enhanceFullScript);
+      console.log('this._throttledOutputFile', this._throttledOutputFile);
+      console.log('this._recorderSources', this._recorderSources.length);
       
       // After adding the close action, enhance the full script if enabled
-      if (this._enhanceFullScript && this._throttledOutputFile && this._recorderSources.length > 0) {
+      if (this._enhanceFullScript && this._throttledOutputFile) {
         try {
-          // Get the script text for the primary language (first in the ordered languages)
-          const primarySourceText = this._recorderSources[0].text;
+          // Get the script text either from recorderSources or directly from throttledOutputFile
+          let scriptToEnhance = '';
           
-          // Enhance the full script
-          process.stdout.write('Enhancing full script after page close...\n');
-          const enhancedScript = await enhanceCompleteScript(primarySourceText, this._currentActions);
-          
-          // Update the first source with the enhanced script
-          this._recorderSources[0].text = enhancedScript;
-          
-          // Update the output file
-          this._throttledOutputFile.setContent(enhancedScript);
-          this._throttledOutputFile.flush();
-          
-          // Emit change event with the updated sources
-          this.emit(ContextRecorder.Events.Change, {
-            sources: this._recorderSources,
-            actions: this._currentActions
-          });
+          if (this._recorderSources.length > 0) {
+            // Get it from the primary source if available
+            scriptToEnhance = this._recorderSources[0].text;
+          } else if (this._throttledOutputFile.getContent()) {
+            // Or from the throttled file if it has content
+            scriptToEnhance = this._throttledOutputFile.getContent();
+          } else if (this._currentActions.length > 0) {
+            // Or generate it from current actions if we have them
+            const primaryLanguage = this._orderedLanguages[0];
+            const languageGeneratorOptions: LanguageGeneratorOptions = {
+              browserName: this._context._browser.options.name,
+              launchOptions: { headless: false, ...this._params.launchOptions, tracesDir: undefined },
+              contextOptions: { ...this._params.contextOptions },
+              deviceName: this._params.device,
+              saveStorage: this._params.saveStorage,
+            };
+            const { text } = await generateCode(this._currentActions, primaryLanguage, languageGeneratorOptions);
+            scriptToEnhance = text;
+          }
+
+          process.stdout.write('Running finally after page close\n');
+
+          if (scriptToEnhance) {
+            // Enhance the full script
+            process.stdout.write('Enhancing full script after page close...\n');
+            const enhancedScript = await enhanceCompleteScript(scriptToEnhance, this._currentActions);
+            
+            // Update the throttled output file
+            this._throttledOutputFile.setContent(enhancedScript);
+            this._throttledOutputFile.flush();
+            
+            // Update sources if they exist
+            if (this._recorderSources.length > 0) {
+              this._recorderSources[0].text = enhancedScript;
+              
+              // Emit change event with the updated sources
+              this.emit(ContextRecorder.Events.Change, {
+                sources: this._recorderSources,
+                actions: this._currentActions
+              });
+            }
+          } else {
+            process.stderr.write('No script content found to enhance.\n');
+          }
         } catch (error) {
           process.stderr.write(`Error while enhancing full script: ${error}\n`);
         }

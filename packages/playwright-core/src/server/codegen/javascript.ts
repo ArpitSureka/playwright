@@ -17,7 +17,7 @@
 import { sanitizeDeviceOptions, toClickOptionsForSourceCode, toKeyboardModifiers, toSignalMap } from './language';
 import { asLocator, escapeWithQuotes } from '../../utils';
 import { deviceDescriptors } from '../deviceDescriptors';
-import { enhanceWithLLM } from './llmEnhancer';
+import { enhanceWithLLM, debugLog } from './llmEnhancer';
 
 import type { Language, LanguageGenerator, LanguageGeneratorOptions } from './types';
 import type { BrowserContextOptions } from '../../../types/types';
@@ -41,6 +41,7 @@ export class JavaScriptLanguageGenerator implements LanguageGenerator {
   }
 
   async generateAction(actionInContext: actions.ActionInContext): Promise<string> {
+    const startTime = Date.now();
     const action = actionInContext.action;
     if (this._isTest && (action.name === 'openPage' || action.name === 'closePage'))
       return '';
@@ -55,6 +56,7 @@ export class JavaScriptLanguageGenerator implements LanguageGenerator {
       return formatter.format();
     }
 
+    debugLog(`[javascript] Starting code generation for action: ${action.name} (${Date.now() - startTime}ms)`);
     const locators = actionInContext.frame.framePath.map(selector => `.${this._asLocator(selector)}.contentFrame()`);
     const subject = `${pageAlias}${locators.join('')}`;
     const signals = toSignalMap(action);
@@ -71,17 +73,17 @@ export class JavaScriptLanguageGenerator implements LanguageGenerator {
     if (signals.download)
       formatter.add(`const download${signals.download.downloadAlias}Promise = ${pageAlias}.waitForEvent('download');`);
 
+    debugLog(`[javascript] Generated signal handling code (${Date.now() - startTime}ms)`);
     // Generate the action code
     let actionCode = this._generateActionCall(subject, actionInContext);
+    debugLog(`[javascript] Generated base action code (${Date.now() - startTime}ms)`);
 
     // Enhance with LLM if enabled
-    // console.log('actionInContextactionInConte xtactionInContextactionInContextactionInContextactionInContextactionInContext')
-    // console.log(actionInContext)
-
-
     if (this._useEnhancer && actionInContext.action.name !== 'screenshot') {
       try {
+        debugLog(`[javascript] Starting LLM enhancement (${Date.now() - startTime}ms)`);
         actionCode = await enhanceWithLLM(actionCode, action, actionInContext);
+        debugLog(`[javascript] Completed LLM enhancement (${Date.now() - startTime}ms)`);
       } catch (error) {
         process.stdout.write(error);
         // Continue with the original code if enhancement fails
@@ -89,12 +91,14 @@ export class JavaScriptLanguageGenerator implements LanguageGenerator {
     }
 
     formatter.add(wrapWithStep(actionInContext.description, actionCode));
+    debugLog(`[javascript] Added formatted code to output (${Date.now() - startTime}ms)`);
 
     if (signals.popup)
       formatter.add(`const ${signals.popup.popupAlias} = await ${signals.popup.popupAlias}Promise;`);
     if (signals.download)
       formatter.add(`const download${signals.download.downloadAlias} = await download${signals.download.downloadAlias}Promise;`);
 
+    debugLog(`[javascript] Completed code generation for action: ${action.name} (${Date.now() - startTime}ms)`);
     return formatter.format();
   }
 
