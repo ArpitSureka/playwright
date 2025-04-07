@@ -53,7 +53,6 @@ export type ClickAction = ActionWithSelector & {
   targetInfo?: {
     tagName: string,
     elementDimensions?: { width: number, height: number },
-    relativePosition?: { x: number, y: number },  // position relative to element (in percentage)
     elementAttributes?: Record<string, string>,
     elementClasses?: string
   }

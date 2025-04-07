@@ -1597,12 +1597,12 @@ function getTargetInfo(event: Event): any {
     info.optionsCount = (targetElement as HTMLSelectElement).options.length;
 
   // Add relative position for mouse events
-  if (event instanceof MouseEvent) {
-    info.relativePosition = {
-      x: rect.width ? (event.offsetX / rect.width) : 0,
-      y: rect.height ? (event.offsetY / rect.height) : 0
-    };
-  }
+  // if (event instanceof MouseEvent) {
+  //   info.relativePosition = {
+  //     x: rect.width ? (event.offsetX / rect.width) : 0,
+  //     y: rect.height ? (event.offsetY / rect.height) : 0
+  //   };
+  // }
 
   return info;
 }

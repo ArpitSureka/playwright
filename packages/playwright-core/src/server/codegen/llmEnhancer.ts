@@ -44,7 +44,7 @@ export async function enhanceWithLLM(
 ): Promise<string> {
   try {
     // Create a unique key for this action to avoid duplicate processing
-    const actionKey = `${action.name}_${JSON.stringify(action)}_${actionContext.startTime}`;
+    const actionKey = `${action.name}_${actionContext.startTime}`;
 
     // Check if we've already processed this action
     if (processedActionCache.has(actionKey)) {
@@ -53,7 +53,7 @@ export async function enhanceWithLLM(
     }
 
     process.stdout.write(`Enhancing code with LLM for action: ${action.name}\n`);
-    debugLog(`Full action data: ${JSON.stringify(action, null, 2)}`);
+    debugLog(`Full action data: ${action}`);
 
     // Initialize the chat model
     const model = new ChatOllama({
@@ -86,18 +86,43 @@ Element Information:
 
     // Prepare the context for the LLM
     const actionData = JSON.stringify(action, null, 2);
-    const systemPrompt = `You are an expert Playwright test developer. Your task is to enhance the generated test code with better comments, assertions, or any improvements that make the test more robust and maintainable.
-    
-Focus on these aspects:
-1. Most Important - when writing locators make sure when that locators dosnt contain any number. the numbers inside id, xpath, etc keeps on changing. 
-2. For each action(click, TextFill, etc) add 1-2 different fallback locators. code should be such if one locator is not giving anything for 2 minutes it should direclty check for another locator that could interact with the same element.
-3. I am providing additional outerHtml of the element as well. Use innerHTML if it could give more robust locators
-4. Additional assertions that verify the expected state
-5. More maintainable code structure
-6. Preserve the existing functionality but make it more robust. Locators should be very robust such that locator not found error dosnt comes easily and also take care of the case where multiple locators are found.
-7. Use the provided element information (XPath, JS Path, etc.) to create more robust locators and multiple fallback locators when appropriate
-8. Some times there is a close Lightbox action which is done. Ignore that and give an empty respose for that locator.
-Just return the improved code without explanations.`;
+    const systemPrompt = `You are an expert Playwright test developer. Your role is to enhance the generated test code to ensure it is highly robust, maintainable, and production-ready. Follow the instructions below strictly:
+
+Primary Goal
+
+Avoid numeric values in locators such as IDs, XPaths, or any selector string that may change dynamically between sessions.
+
+Locator Strategy
+
+For every interaction (e.g., click, fill, etc.), generate 1-2 or more fallback locators.
+Dont use position for any interaction it is very prone to failures.
+Implement fallback logic: if the first locator fails to match within 2 minutes, automatically try the next available fallback.
+
+Element Information Usage
+
+You will be provided with outerHTML. Use html inside them to make more better locators if possible.
+Use additional details such as XPath, JS Path, or class names if they help improve reliability.
+
+Assertions and Validation
+
+Add meaningful assertions to verify that the expected state has been reached after each key action.
+Ensure that assertions do not depend on brittle values or frequently changing attributes.
+
+Maintainability and Readability
+
+Add some random text characters in the variable name each time a var is introduced to ensure that same variable is not redeclared multiple times.
+Structure the test code to be clean, modular, and easy to update.
+Preserve existing functionality while improving resilience.
+Ensure locator strategies avoid issues like "locator not found".
+
+Special Conditions
+
+If the test includes a lightbox close action, ignore it completely. Return an empty response for that step.
+
+Output Instructions
+
+Return only the improved Playwright code.
+Do not include any explanations or extra commentary.`;
 
     const userPrompt = `Here's a Playwright action in JSON format:
 \`\`\`json
@@ -114,7 +139,7 @@ Please enhance this code to make it more robust and maintainable while preservin
     debugLog('Sending prompt to LLM...');
 
     // Get response from the LLM
-    const response = await model.call([
+    const response = await model.invoke([
       new SystemMessage(systemPrompt),
       new HumanMessage(userPrompt)
     ]);
@@ -175,16 +200,22 @@ export async function enhanceCompleteScript(
     // Prepare a specialized system prompt for the complete script analysis
     const systemPrompt = `You are an expert Playwright test automation engineer. You need to optimize and improve a full Playwright test script.
 
+    IMPORTANT - Ensure that the same variables are not declared multiple times. If they are take care of that error. 
+
 Focus on these aspects for the complete test:
-1. Organize the test into logical sections with appropriate comments
-2. Add proper setup and teardown if missing
-3. Implement better wait strategies and timeouts where needed
-4. Add meaningful assertions to verify test success
-5. Implement error handling and recovery mechanisms
-6. Optimize selectors for better test reliability
-7. Refactor repeated code patterns into reusable functions
-8. Add logging to help with debugging
-9. Ensure the test follows best practices for Playwright automation
+1. Ensure that where-ever the user has entered a text it becomes a variable and is declared at the top of the code so it can easily be changed.
+2. Anytime user extracts a text and the same text is entered later store the extracted text and use the variable to enter the text.
+3. Make sure the script does not contain any error. 
+4. Make the code easity configurable.
+5. More maintainable code structure
+6. Preserve the existing functionality but make it more robust.
+7. Organize the test into logical sections
+8. Add proper setup and teardown if missing
+9. Implement better wait strategies and timeouts where needed
+10. Optimize selectors for better test reliability
+11. Refactor repeated code patterns into reusable functions
+12. Ensure the test follows best practices for Playwright automation
+
 
 Return the complete improved test script. Do not include explanations, just the improved code.`;
 
@@ -199,7 +230,7 @@ Please provide the complete enhanced test script.`;
     debugLog('Sending complete script to LLM...');
 
     // Get response from the LLM
-    const response = await model.call([
+    const response = await model.invoke([
       new SystemMessage(systemPrompt),
       new HumanMessage(userPrompt)
     ]);

@@ -106,15 +106,7 @@ export function toClickOptionsForSourceCode(action: actions.ClickAction): types.
     options.clickCount = action.clickCount;
 
   // Calculate position with relative info if available
-  if (action.targetInfo?.relativePosition && action.targetInfo?.elementDimensions) {
-    const { width, height } = action.targetInfo.elementDimensions;
-    const { x, y } = action.targetInfo.relativePosition;
-    // Convert relative position (0-1) to actual pixels
-    options.position = {
-      x: Math.round(width * x),
-      y: Math.round(height * y)
-    };
-  } else if (action.position){
+  if (action.position){
     options.position = action.position;
   }
   // Add targetInfo if available

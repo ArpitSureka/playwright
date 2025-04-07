@@ -124,7 +124,6 @@ export type MouseClickOptions = PointerActionOptions & {
   targetInfo?: {
     tagName: string;
     elementDimensions?: { width: number; height: number };
-    relativePosition?: { x: number; y: number };
     elementAttributes?: Record<string, string>;
     elementClasses?: string;
   };
