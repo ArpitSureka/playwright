@@ -36,6 +36,20 @@ The Playwright Recorder has been enhanced with several new features:
    - Logs element interactions with rich context
    - Provides real-time monitoring during code generation
 
+## Design And Design Logic
+
+![Design](<docs/Untitled Diagram.drawio.svg>)
+
+Problem - trying to solve using this AI Enhanced Codegen - I was working on project where there were really long 
+test scripts to be developed for a website that was really shitty. Codegen usually gives the wrong code for that 
+website. Further problem there were two different sets of people one who knew what test needs to be built and 
+other the test developers. Wanted to ensure that enhanced codegen was able to add validations and all the values
+in the script as variables
+
+Solution - First as soon as 
+
+
+
 ### Debug & Monitoring Tools
 
 1. **Watch-Recorder Script**

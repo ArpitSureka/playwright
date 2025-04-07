@@ -21,9 +21,6 @@ import { LLMProviderFactory, MessageRole, type Message } from './llmProvider';
 // Cache to ensure we don't process the same action multiple times
 const processedActionCache = new Map<string, string>();
 
-// Cache for complete scripts to avoid processing the same script multiple times
-const processedScriptCache = new Map<string, string>();
-
 // Load configuration
 const llmConfig = loadLLMConfig();
 
@@ -130,12 +127,6 @@ export async function enhanceCompleteScript(
     // Create a unique hash for this script to avoid duplicates
     const scriptHash = hashString(completeScript);
 
-    // Check if we've already processed this script
-    if (processedScriptCache.has(scriptHash)) {
-      debugLog('Using cached result for complete script');
-      return processedScriptCache.get(scriptHash)!;
-    }
-
     process.stdout.write('Enhancing complete test script with LLM...\n');
     debugLog(`Complete script length: ${completeScript.length} characters`);
 
@@ -171,8 +162,6 @@ export async function enhanceCompleteScript(
       }
     }
 
-    // Cache the result
-    processedScriptCache.set(scriptHash, finalScript);
     debugLog('Cached result for complete script');
 
     return finalScript;
