@@ -109,11 +109,9 @@ export class JavaLanguageGenerator implements LanguageGenerator {
         // Include targeting comments if targetInfo is available
         let result = `${subject}.${this._asLocator(action.selector, inFrameLocator)}.${method}(${optionsText});`;
         if (action.targetInfo) {
-          const { tagName, elementDimensions, elementAttributes, elementClasses } = action.targetInfo;
+          const { tagName, elementAttributes, elementClasses } = action.targetInfo;
           const comments = [];
           comments.push(`// Clicked on ${tagName}${elementClasses ? ` with classes "${elementClasses}"` : ''}`);
-          if (elementDimensions)
-            comments.push(`// Element dimensions: ${elementDimensions.width}x${elementDimensions.height}`);
           if (comments.length > 0) {
             result = comments.join('\n') + '\n' + result;
           }
@@ -125,11 +123,9 @@ export class JavaLanguageGenerator implements LanguageGenerator {
         // Include targeting comments if targetInfo is available
         let checkResult = `${subject}.${this._asLocator(action.selector, inFrameLocator)}.check();`;
         if (action.targetInfo) {
-          const { tagName, elementDimensions, elementClasses, inputType } = action.targetInfo;
+          const { tagName, elementClasses, inputType } = action.targetInfo;
           const comments = [];
           comments.push(`// Checked ${tagName}${elementClasses ? ` with classes "${elementClasses}"` : ''}${inputType ? ` (type="${inputType}")` : ''}`);
-          if (elementDimensions)
-            comments.push(`// Element dimensions: ${elementDimensions.width}x${elementDimensions.height}`);
           if (comments.length > 0)
             checkResult = comments.join('\n') + '\n' + checkResult;
         }
@@ -138,11 +134,9 @@ export class JavaLanguageGenerator implements LanguageGenerator {
         // Include targeting comments if targetInfo is available
         let uncheckResult = `${subject}.${this._asLocator(action.selector, inFrameLocator)}.uncheck();`;
         if (action.targetInfo) {
-          const { tagName, elementDimensions, elementClasses, inputType } = action.targetInfo;
+          const { tagName, elementClasses, inputType } = action.targetInfo;
           const comments = [];
           comments.push(`// Unchecked ${tagName}${elementClasses ? ` with classes "${elementClasses}"` : ''}${inputType ? ` (type="${inputType}")` : ''}`);
-          if (elementDimensions)
-            comments.push(`// Element dimensions: ${elementDimensions.width}x${elementDimensions.height}`);
           if (comments.length > 0)
             uncheckResult = comments.join('\n') + '\n' + uncheckResult;
         }
@@ -151,11 +145,9 @@ export class JavaLanguageGenerator implements LanguageGenerator {
         // Include targeting comments if targetInfo is available
         let fillResult = `${subject}.${this._asLocator(action.selector, inFrameLocator)}.fill(${quote(action.text)});`;
         if (action.targetInfo) {
-          const { tagName, elementDimensions, elementClasses, inputType } = action.targetInfo;
+          const { tagName, elementClasses, inputType } = action.targetInfo;
           const comments = [];
           comments.push(`// Filled ${tagName}${elementClasses ? ` with classes "${elementClasses}"` : ''}${inputType ? ` (type="${inputType}")` : ''}`);
-          if (elementDimensions)
-            comments.push(`// Element dimensions: ${elementDimensions.width}x${elementDimensions.height}`);
           comments.push(`// Entered text: "${action.text}"`);
           if (comments.length > 0)
             fillResult = comments.join('\n') + '\n' + fillResult;
@@ -169,11 +161,9 @@ export class JavaLanguageGenerator implements LanguageGenerator {
         // Include targeting comments if targetInfo is available
         let pressResult = `${subject}.${this._asLocator(action.selector, inFrameLocator)}.press(${quote(shortcut)});`;
         if (action.targetInfo) {
-          const { tagName, elementDimensions, elementClasses } = action.targetInfo;
+          const { tagName, elementClasses } = action.targetInfo;
           const comments = [];
           comments.push(`// Pressed ${shortcut} on ${tagName}${elementClasses ? ` with classes "${elementClasses}"` : ''}`);
-          if (elementDimensions)
-            comments.push(`// Element dimensions: ${elementDimensions.width}x${elementDimensions.height}`);
           if (comments.length > 0)
             pressResult = comments.join('\n') + '\n' + pressResult;
         }
@@ -185,11 +175,9 @@ export class JavaLanguageGenerator implements LanguageGenerator {
         // Include targeting comments if targetInfo is available
         let selectResult = `${subject}.${this._asLocator(action.selector, inFrameLocator)}.selectOption(${formatSelectOption(action.options.length === 1 ? action.options[0] : action.options)});`;
         if (action.targetInfo) {
-          const { tagName, elementDimensions, elementClasses, optionsCount } = action.targetInfo;
+          const { tagName, elementClasses, optionsCount } = action.targetInfo;
           const comments = [];
           comments.push(`// Selected option in ${tagName}${elementClasses ? ` with classes "${elementClasses}"` : ''}${optionsCount ? ` (${optionsCount} options available)` : ''}`);
-          if (elementDimensions)
-            comments.push(`// Element dimensions: ${elementDimensions.width}x${elementDimensions.height}`);
           comments.push(`// Selected value(s): ${JSON.stringify(action.options)}`);
           if (comments.length > 0)
             selectResult = comments.join('\n') + '\n' + selectResult;

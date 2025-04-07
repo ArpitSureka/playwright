@@ -52,7 +52,6 @@ export type ClickAction = ActionWithSelector & {
   position?: Point,
   targetInfo?: {
     tagName: string,
-    elementDimensions?: { width: number, height: number },
     elementAttributes?: Record<string, string>,
     elementClasses?: string
   }
@@ -62,7 +61,6 @@ export type CheckAction = ActionWithSelector & {
   name: 'check',
   targetInfo?: {
     tagName: string,
-    elementDimensions?: { width: number, height: number },
     elementAttributes?: Record<string, string>,
     elementClasses?: string,
     inputType?: string
@@ -73,7 +71,6 @@ export type UncheckAction = ActionWithSelector & {
   name: 'uncheck',
   targetInfo?: {
     tagName: string,
-    elementDimensions?: { width: number, height: number },
     elementAttributes?: Record<string, string>,
     elementClasses?: string,
     inputType?: string
@@ -85,7 +82,6 @@ export type FillAction = ActionWithSelector & {
   text: string,
   targetInfo?: {
     tagName: string,
-    elementDimensions?: { width: number, height: number },
     elementAttributes?: Record<string, string>,
     elementClasses?: string,
     inputType?: string
@@ -113,7 +109,6 @@ export type PressAction = ActionBase & {
   modifiers: number,
   targetInfo?: {
     tagName: string,
-    elementDimensions?: { width: number, height: number },
     elementAttributes?: Record<string, string>,
     elementClasses?: string
   }
@@ -124,7 +119,6 @@ export type SelectAction = ActionWithSelector & {
   options: string[],
   targetInfo?: {
     tagName: string,
-    elementDimensions?: { width: number, height: number },
     elementAttributes?: Record<string, string>,
     elementClasses?: string,
     optionsCount?: number

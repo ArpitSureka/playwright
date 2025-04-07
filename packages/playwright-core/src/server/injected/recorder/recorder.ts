@@ -37,6 +37,26 @@ enum ContentTypeEnum {
   value='value'
 }
 
+const helpfulAttributes = new Set([
+  'id',
+  'name',
+  'class',
+  'type',
+  'title',
+  'placeholder',
+  'aria-label',
+  'data-testid',
+  'data-test',
+  'data-qa',
+  'role', // occasionally helpful
+  'alt',  // especially for <img> tags
+  'href', // useful for <a> tags
+  'for',  // useful in <label for=...>
+  'value', // sometimes useful for inputs with prefilled values
+  'data-value', // custom data attributes
+  'label' // for custom elements
+]);
+
 interface RecorderTool {
   cursor(): string;
   cleanup?(): void;
@@ -1574,15 +1594,12 @@ function getTargetInfo(event: Event): any {
   const attributes: Record<string, string> = {};
   for (let i = 0; i < targetElement.attributes.length; i++) {
     const attr = targetElement.attributes[i];
-    attributes[attr.name] = attr.value;
+    if(helpfulAttributes.has(attr.name.toLowerCase()))
+      attributes[attr.name] = attr.value;
   }
   
   const info: any = {
     tagName: targetElement.tagName,
-    elementDimensions: {
-      width: rect.width,
-      height: rect.height
-    },
     elementAttributes: attributes,
     elementClasses: targetElement.className,
     paths: elementPaths

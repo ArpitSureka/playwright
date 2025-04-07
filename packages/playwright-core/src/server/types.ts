@@ -123,7 +123,6 @@ export type MouseClickOptions = PointerActionOptions & {
   clickCount?: number;
   targetInfo?: {
     tagName: string;
-    elementDimensions?: { width: number; height: number };
     elementAttributes?: Record<string, string>;
     elementClasses?: string;
   };

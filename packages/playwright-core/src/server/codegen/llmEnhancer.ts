@@ -37,6 +37,10 @@ function debugLog(message: string) {
     process.stdout.write(`[LLM Debug] ${message}\n`);
 }
 
+function randomWord() {
+  return [...Array(4)].map(() => "abcdefghijklmnopqrstuvwxyz0123456789"[Math.floor(Math.random() * 36)]).join('');
+}
+
 export async function enhanceWithLLM(
   generatedCode: string,
   action: actions.Action,
@@ -44,6 +48,12 @@ export async function enhanceWithLLM(
 ): Promise<string> {
   try {
     // Create a unique key for this action to avoid duplicate processing
+
+    // Removing position if present
+    let action_modified = action;
+    if ('position' in action_modified) delete action_modified['position'];
+
+
     const actionKey = `${action.name}_${actionContext.startTime}`;
 
     // Check if we've already processed this action
@@ -52,22 +62,21 @@ export async function enhanceWithLLM(
       return processedActionCache.get(actionKey)!;
     }
 
-    process.stdout.write(`Enhancing code with LLM for action: ${action.name}\n`);
-    debugLog(`Full action data: ${action}`);
-
     // Initialize the chat model
     const model = new ChatOllama({
       baseUrl: OLLAMA_BASE_URL,
       model: OLLAMA_MODEL,
-      temperature: 0.2,
+      temperature: 0.7,
       numPredict: 500
     });
 
     debugLog(`Using Ollama at ${OLLAMA_BASE_URL} with model ${OLLAMA_MODEL}`);
 
     // Extract element information if available - using optional chaining to avoid type errors
-    const targetInfo = (action as any).targetInfo || {};
+    const targetInfo = (action_modified as any).targetInfo || {};
     const elementPaths = targetInfo.paths || {};
+
+
 
     // Prepare additional element context if available
     let elementContext = '';
@@ -82,49 +91,74 @@ Element Information:
 - JS Path: ${elementPaths.jsPath || 'N/A'}
 - OuterHTML: ${elementPaths.outerHTML || 'N/A'}
 `;
+
+      // Remove data from action_modified that's already in elementContext
+      if ((action_modified as any).targetInfo) {
+        const targetInfoCopy = { ...(action_modified as any).targetInfo };
+        delete targetInfoCopy.tagName;
+        delete targetInfoCopy.elementClasses;
+        delete targetInfoCopy.elementAttributes;
+        if (targetInfoCopy.paths) {
+          delete targetInfoCopy.paths.xpath;
+          delete targetInfoCopy.paths.fullXPath;
+          delete targetInfoCopy.paths.jsPath;
+          delete targetInfoCopy.paths.outerHTML;
+
+          // If paths object is now empty, remove it
+          if (Object.keys(targetInfoCopy.paths).length === 0) {
+            delete targetInfoCopy.paths;
+          }
+        }
+
+        // If targetInfo is now empty, remove it entirely
+        if (Object.keys(targetInfoCopy).length === 0) {
+          delete (action_modified as any).targetInfo;
+        } else {
+          (action_modified as any).targetInfo = targetInfoCopy;
+        }
+      }
     }
 
+    // Convert action to string before modifying it for element context
+    const actionData = JSON.stringify(action_modified, null, 2);
+
+    process.stdout.write(`Enhancing code with LLM for action: ${action.name}\n`);
+    debugLog(`Full action data: ${actionData}`);
+    debugLog(`Full action data: ${generatedCode}`);
+    // debugLog(`Full action data: ${actionContext}`);
+
     // Prepare the context for the LLM
-    const actionData = JSON.stringify(action, null, 2);
-    const systemPrompt = `You are an expert Playwright test developer. Your role is to enhance the generated test code to ensure it is highly robust, maintainable, and production-ready. Follow the instructions below strictly:
 
-Primary Goal
+    const systemPrompt = `You are a seasoned Playwright test automation expert. Your task is to transform individual action instructions into robust, production-ready JavaScript code. Each action will be provided sequentially, and your output for each should be modular, clean, and mergeable into a complete test suite. Follow these guidelines precisely:
 
-Avoid numeric values in locators such as IDs, XPaths, or any selector string that may change dynamically between sessions.
+1. **Coordinate Avoidance**
+   - ❌ Do not use absolute coordinates (e.g., 'locator.click({ position: { x: 167, y: 22 } })').
 
-Locator Strategy
+2. **Avoid Dynamic Values**
+   - Do not use dynamic values such as numeric IDs or changing XPath fragments (e.g., avoid using 'id="__037EA11827UYMTVTDC1AMMWI"').
 
-For every interaction (e.g., click, fill, etc.), generate 1-2 or more fallback locators.
-Dont use position for any interaction it is very prone to failures.
-Implement fallback logic: if the first locator fails to match within 2 minutes, automatically try the next available fallback.
+3. **Fallback Locators**
+   - Always include at least 1 fallback locator. which should be different than primary
+   - Implement retry logic for fallback locators if the primary fails within 2 minutes.
 
-Element Information Usage
+4. **Utilize outerHTML Content**
+   - Use 'outerHTML' to enhance locators by identifying reliable attributes or DOM paths.
 
-You will be provided with outerHTML. Use html inside them to make more better locators if possible.
-Use additional details such as XPath, JS Path, or class names if they help improve reliability.
+5. **Unique Variable Naming**
+   - make unique variable names by appending random characters to avoid redeclaration during code merging. In the action i will provide a 3 random_word use any of them when declaring variables. 
+      e.g., if varible name is 'searchBox' and random_word is '32n2' so make variable name searchBox_32n2,
+      if varible name is 'userField' and random_word is '234c' so make variable name userField_234c
 
-Assertions and Validation
+6. **Modularity and Maintainability**
+   - ❌ Never use targetInfo in the give code eg. locator.click({ targetInfo: { elementClasses: 'loginInputField'} }) - Don't do this;
 
-Add meaningful assertions to verify that the expected state has been reached after each key action.
-Ensure that assertions do not depend on brittle values or frequently changing attributes.
+7. **Ignore Lightbox Close Actions**
+   - For actions involving lightbox close, return an empty step (no code output).
 
-Maintainability and Readability
+8. **Output Requirement**
+   - Output only the improved Playwright code without any extra text.`;
 
-Add some random text characters in the variable name each time a var is introduced to ensure that same variable is not redeclared multiple times.
-Structure the test code to be clean, modular, and easy to update.
-Preserve existing functionality while improving resilience.
-Ensure locator strategies avoid issues like "locator not found".
-
-Special Conditions
-
-If the test includes a lightbox close action, ignore it completely. Return an empty response for that step.
-
-Output Instructions
-
-Return only the improved Playwright code.
-Do not include any explanations or extra commentary.`;
-
-    const userPrompt = `Here's a Playwright action in JSON format:
+    const userPrompt = `Here's one Playwright action in JSON format:
 \`\`\`json
 ${actionData}
 \`\`\`
@@ -133,10 +167,12 @@ Here's the generated code for this action:
 \`\`\`javascript
 ${generatedCode}
 \`\`\`
+random_word - ${randomWord()}, ${randomWord()}, ${randomWord()}
 
-Please enhance this code to make it more robust and maintainable while preserving its functionality. When appropriate, consider using the element paths information to create more reliable selectors or fallback mechanisms.`;
+`;
 
     debugLog('Sending prompt to LLM...');
+    const start = Date.now();
 
     // Get response from the LLM
     const response = await model.invoke([
@@ -145,7 +181,9 @@ Please enhance this code to make it more robust and maintainable while preservin
     ]);
 
     let enhancedCode = response.content.toString();
-    debugLog('Got response from LLM');
+    const end = Date.now();
+    const timeTaken = end - start;
+    debugLog(`Got response from LLM : ${timeTaken} ms`);
 
     // Extract code from markdown code blocks if present
     if (enhancedCode.includes('```')) {
@@ -192,7 +230,6 @@ export async function enhanceCompleteScript(
     const model = new ChatOllama({
       baseUrl: OLLAMA_BASE_URL,
       model: OLLAMA_MODEL,
-      temperature: 0.7,
     });
 
     debugLog(`Using Ollama at ${OLLAMA_BASE_URL} with model ${OLLAMA_MODEL}`);

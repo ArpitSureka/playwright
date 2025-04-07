@@ -128,11 +128,9 @@ export class CSharpLanguageGenerator implements LanguageGenerator {
         // Include targeting comments if targetInfo is available
         let result = command;
         if (action.targetInfo) {
-          const { tagName, elementDimensions, elementAttributes, elementClasses } = action.targetInfo;
+          const { tagName, elementAttributes, elementClasses } = action.targetInfo;
           const comments = [];
           comments.push(`// Clicked on ${tagName}${elementClasses ? ` with classes "${elementClasses}"` : ''}`);
-          if (elementDimensions)
-            comments.push(`// Element dimensions: ${elementDimensions.width}x${elementDimensions.height}`);
           if (comments.length > 0) {
             result = comments.join('\n') + '\n' + result;
           }
@@ -144,11 +142,9 @@ export class CSharpLanguageGenerator implements LanguageGenerator {
         // Include targeting comments if targetInfo is available
         let checkCommand = `await ${subject}.${this._asLocator(action.selector)}.CheckAsync();`;
         if (action.targetInfo) {
-          const { tagName, elementDimensions, elementClasses, inputType } = action.targetInfo;
+          const { tagName, elementClasses, inputType } = action.targetInfo;
           const comments = [];
           comments.push(`// Checked ${tagName}${elementClasses ? ` with classes "${elementClasses}"` : ''}${inputType ? ` (type="${inputType}")` : ''}`);
-          if (elementDimensions)
-            comments.push(`// Element dimensions: ${elementDimensions.width}x${elementDimensions.height}`);
           if (comments.length > 0)
             checkCommand = comments.join('\n') + '\n' + checkCommand;
         }
@@ -157,11 +153,9 @@ export class CSharpLanguageGenerator implements LanguageGenerator {
         // Include targeting comments if targetInfo is available
         let uncheckCommand = `await ${subject}.${this._asLocator(action.selector)}.UncheckAsync();`;
         if (action.targetInfo) {
-          const { tagName, elementDimensions, elementClasses, inputType } = action.targetInfo;
+          const { tagName, elementClasses, inputType } = action.targetInfo;
           const comments = [];
           comments.push(`// Unchecked ${tagName}${elementClasses ? ` with classes "${elementClasses}"` : ''}${inputType ? ` (type="${inputType}")` : ''}`);
-          if (elementDimensions)
-            comments.push(`// Element dimensions: ${elementDimensions.width}x${elementDimensions.height}`);
           if (comments.length > 0)
             uncheckCommand = comments.join('\n') + '\n' + uncheckCommand;
         }
@@ -170,11 +164,9 @@ export class CSharpLanguageGenerator implements LanguageGenerator {
         // Include targeting comments if targetInfo is available
         let fillCommand = `await ${subject}.${this._asLocator(action.selector)}.FillAsync(${quote(action.text)});`;
         if (action.targetInfo) {
-          const { tagName, elementDimensions, elementClasses, inputType } = action.targetInfo;
+          const { tagName, elementClasses, inputType } = action.targetInfo;
           const comments = [];
           comments.push(`// Filled ${tagName}${elementClasses ? ` with classes "${elementClasses}"` : ''}${inputType ? ` (type="${inputType}")` : ''}`);
-          if (elementDimensions)
-            comments.push(`// Element dimensions: ${elementDimensions.width}x${elementDimensions.height}`);
           comments.push(`// Entered text: "${action.text}"`);
           if (comments.length > 0)
             fillCommand = comments.join('\n') + '\n' + fillCommand;
@@ -188,11 +180,9 @@ export class CSharpLanguageGenerator implements LanguageGenerator {
         // Include targeting comments if targetInfo is available
         let pressCommand = `await ${subject}.${this._asLocator(action.selector)}.PressAsync(${quote(shortcut)});`;
         if (action.targetInfo) {
-          const { tagName, elementDimensions, elementClasses } = action.targetInfo;
+          const { tagName, elementClasses } = action.targetInfo;
           const comments = [];
           comments.push(`// Pressed ${shortcut} on ${tagName}${elementClasses ? ` with classes "${elementClasses}"` : ''}`);
-          if (elementDimensions)
-            comments.push(`// Element dimensions: ${elementDimensions.width}x${elementDimensions.height}`);
           if (comments.length > 0)
             pressCommand = comments.join('\n') + '\n' + pressCommand;
         }
@@ -204,11 +194,9 @@ export class CSharpLanguageGenerator implements LanguageGenerator {
         // Include targeting comments if targetInfo is available
         let selectCommand = `await ${subject}.${this._asLocator(action.selector)}.SelectOptionAsync(${formatObject(action.options)});`;
         if (action.targetInfo) {
-          const { tagName, elementDimensions, elementClasses, optionsCount } = action.targetInfo;
+          const { tagName, elementClasses, optionsCount } = action.targetInfo;
           const comments = [];
           comments.push(`// Selected option in ${tagName}${elementClasses ? ` with classes "${elementClasses}"` : ''}${optionsCount ? ` (${optionsCount} options available)` : ''}`);
-          if (elementDimensions)
-            comments.push(`// Element dimensions: ${elementDimensions.width}x${elementDimensions.height}`);
           comments.push(`// Selected value(s): ${JSON.stringify(action.options)}`);
           if (comments.length > 0)
             selectCommand = comments.join('\n') + '\n' + selectCommand;
