@@ -79,7 +79,7 @@ export class JavaScriptLanguageGenerator implements LanguageGenerator {
     debugLog(`[javascript] Generated base action code (${Date.now() - startTime}ms)`);
 
     // Enhance with LLM if enabled
-    if (this._useEnhancer && actionInContext.action.name !== 'screenshot') {
+    if (this._useEnhancer && !(['closePage', 'screenshot'].includes(actionInContext.action.name))) {
       try {
         debugLog(`[javascript] Starting LLM enhancement (${Date.now() - startTime}ms)`);
         actionCode = await enhanceWithLLM(actionCode, action, actionInContext);
