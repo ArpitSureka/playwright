@@ -33,9 +33,8 @@ const DEBUG_LLM = process.env.PW_DEBUG_LLM === '1';
 
 // Helper function for logging that respects the debug flag
 function debugLog(message: string) {
-  if (DEBUG_LLM) {
+  if (DEBUG_LLM)
     process.stdout.write(`[LLM Debug] ${message}\n`);
-  }
 }
 
 export async function enhanceWithLLM(
@@ -60,7 +59,8 @@ export async function enhanceWithLLM(
     const model = new ChatOllama({
       baseUrl: OLLAMA_BASE_URL,
       model: OLLAMA_MODEL,
-      temperature: 0.7,
+      temperature: 0.2,
+      numPredict: 500
     });
 
     debugLog(`Using Ollama at ${OLLAMA_BASE_URL} with model ${OLLAMA_MODEL}`);
@@ -86,16 +86,17 @@ Element Information:
 
     // Prepare the context for the LLM
     const actionData = JSON.stringify(action, null, 2);
-    const systemPrompt = `You are an expert Playwright test developer. Your task is to enhance the generated test code with better comments, error handling, assertions, or any improvements that make the test more robust and maintainable.
+    const systemPrompt = `You are an expert Playwright test developer. Your task is to enhance the generated test code with better comments, assertions, or any improvements that make the test more robust and maintainable.
     
 Focus on these aspects:
-1. Better descriptive comments about the element interactions
-2. Improved error handling where appropriate
-3. Additional assertions that verify the expected state
-4. More maintainable code structure
-5. Preserve the existing functionality but make it more robust
-6. Use the provided element information (XPath, JS Path, etc.) to create more robust selectors or fallback selectors when appropriate
-
+1. Most Important - when writing locators make sure when that locators dosnt contain any number. the numbers inside id, xpath, etc keeps on changing. 
+2. For each action(click, TextFill, etc) add 1-2 different fallback locators. code should be such if one locator is not giving anything for 2 minutes it should direclty check for another locator that could interact with the same element.
+3. I am providing additional outerHtml of the element as well. Use innerHTML if it could give more robust locators
+4. Additional assertions that verify the expected state
+5. More maintainable code structure
+6. Preserve the existing functionality but make it more robust. Locators should be very robust such that locator not found error dosnt comes easily and also take care of the case where multiple locators are found.
+7. Use the provided element information (XPath, JS Path, etc.) to create more robust locators and multiple fallback locators when appropriate
+8. Some times there is a close Lightbox action which is done. Ignore that and give an empty respose for that locator.
 Just return the improved code without explanations.`;
 
     const userPrompt = `Here's a Playwright action in JSON format:
@@ -238,4 +239,4 @@ function hashString(str: string): string {
     hash = hash & hash; // Convert to 32bit integer
   }
   return hash.toString();
-} 
+}

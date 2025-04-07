@@ -36,8 +36,8 @@ export class JavaScriptLanguageGenerator implements LanguageGenerator {
     this.name = isTest ? 'Test' : 'Library';
     this._isTest = isTest;
     this._useEnhancer = process.env.PW_USE_LLM_ENHANCER === '1';
-    console.log(process.env.PW_USE_LLM_ENHANCER)
-    console.log(this._useEnhancer);
+    // console.log(process.env.PW_USE_LLM_ENHANCER);
+    // console.log(this._useEnhancer);
   }
 
   async generateAction(actionInContext: actions.ActionInContext): Promise<string> {
@@ -75,7 +75,7 @@ export class JavaScriptLanguageGenerator implements LanguageGenerator {
     let actionCode = this._generateActionCall(subject, actionInContext);
 
     // Enhance with LLM if enabled
-    console.log('actionInContextactionInContextactionInContextactionInContextactionInContextactionInContextactionInContext')
+    // console.log('actionInContextactionInConte xtactionInContextactionInContextactionInContextactionInContextactionInContext')
     // console.log(actionInContext)
 
 
@@ -83,6 +83,7 @@ export class JavaScriptLanguageGenerator implements LanguageGenerator {
       try {
         actionCode = await enhanceWithLLM(actionCode, action, actionInContext);
       } catch (error) {
+        process.stdout.write(error);
         // Continue with the original code if enhancement fails
       }
     }
@@ -99,10 +100,10 @@ export class JavaScriptLanguageGenerator implements LanguageGenerator {
 
   private _generateActionCall(subject: string, actionInContext: actions.ActionInContext): string {
     const action = actionInContext.action;
-    console.log('generateActionCall - ', JSON.stringify(action, null, 2));
+    // console.log('generateActionCall - ', JSON.stringify(action, null, 2));
     // console.log('Action type: ', action.name);
     // console.log('Action selector: ', (action as any).selector);
-    
+
     switch (action.name) {
       case 'openPage':
         throw Error('Not reached');
