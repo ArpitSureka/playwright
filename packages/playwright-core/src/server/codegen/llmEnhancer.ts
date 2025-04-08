@@ -189,31 +189,27 @@ Element Information:
       // Prepare the context for the LLM
       const systemPrompt = `You are a seasoned Playwright test automation expert. Your task is to transform individual action instructions into robust, production-ready JavaScript code. Each action will be provided sequentially, and your output for each should be modular, clean, and mergeable into a complete test suite. Follow these guidelines precisely:
 
-1. **Coordinate Avoidance**
-   - ❌ Do not use absolute coordinates (e.g., 'locator.click({ position: { x: 167, y: 22 } })').
+Avoid using class as a locator or a list of class as there are multiple locators wth the same class/list of class.
 
-2. **Avoid Dynamic Values**
+1. **Avoid Dynamic Values**
    - Do not use dynamic values such as numeric IDs or changing XPath fragments (e.g., avoid using 'id="__037EA11827UYMTVTDC1AMMWI"').
 
-3. **Fallback Locators**
+2. **Fallback Locators**
    - Always include at least 1 fallback locator. which should be different than primary
    - Implement retry logic for fallback locators if the primary fails within 2 minutes.
 
-4. **Utilize outerHTML Content**
+3. **Utilize outerHTML Content**
    - Use 'outerHTML' to enhance locators by identifying reliable attributes or DOM paths.
 
-5. **Unique Variable Naming**
+4. **Unique Variable Naming**
    - make unique variable names by appending random characters to avoid redeclaration during code merging. In the action i will provide a 3 random_word use any of them when declaring variables. 
       e.g., if varible name is 'searchBox' and random_word is '32n2' so make variable name searchBox_32n2,
       if varible name is 'userField' and random_word is '234c' so make variable name userField_234c
 
-6. **Modularity and Maintainability**
-   - ❌ Never use targetInfo in the give code eg. locator.click({ targetInfo: { elementClasses: 'loginInputField'} }) - Don't do this;
-
-7. **Ignore Lightbox Close Actions**
+5. **Ignore Lightbox Close Actions**
    - For actions involving lightbox close, return an empty step (no code output).
 
-8. **Output Requirement**
+6. **Output Requirement**
    - Output only the improved Playwright code without any extra text.`;
 
       const userPrompt = `Here's one Playwright action in JSON format:
@@ -360,6 +356,8 @@ Return ONLY the complete enhanced test script with ALL functionality preserved.`
         enhancedOperations.fills < originalOperations.fills * 0.9 ||
         enhancedOperations.navigations < originalOperations.navigations * 0.9) {
       debugLog('Warning: Enhanced script appears to be missing key operations. Falling back to original script.');
+
+      debugLog(enhancedScript)
       return completeScript;
     }
 
