@@ -86,7 +86,7 @@ export class JavaScriptLanguageGenerator implements LanguageGenerator {
     let enhancedActionCall = actionCall;
 
     // Enhance with LLM if enabled
-    if (this._enhancer && this._enhancer.actionEnhancer && !(['closePage', 'screenshot', 'fill', 'press'].includes(actionInContext.action.name))) {
+    if (this._enhancer && this._enhancer.actionEnhancer && !(['closePage'].includes(actionInContext.action.name))) {
       try {
         enhancedActionCall = await this._enhancer.enhanceActionWithLLM(enhancedActionCall, action, actionInContext);
       } catch (error) {
