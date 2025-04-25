@@ -230,6 +230,9 @@ ${generatedCode}
               enhancedCode = match[1].trim();
           }
 
+          // Ensure there's exactly one empty line at the end
+          enhancedCode = enhancedCode.trimEnd() + '\n\n';
+
           processedActionCache.set(actionKey, enhancedCode);
           pendingRequests.delete(actionKey);
 
@@ -312,6 +315,9 @@ Output ONLY the improved code, preserving EVERY SINGLE existing functionality.`;
           enhancedScript = match[1].trim();
       }
 
+      // Ensure there's exactly one empty line at the end
+      enhancedScript = enhancedScript.trimEnd() + '\n';
+
       return enhancedScript;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -356,7 +362,6 @@ Output ONLY the improved code, preserving EVERY SINGLE existing functionality.`;
           const llmStartTime = Date.now();
 
           debugLog('Sending complete script to LLM...');
-          // debugLog(action.name);
 
           const response = await this.actionEnhancer.invoke([
             new SystemMessage(this.action_systemPrompt),
@@ -373,6 +378,9 @@ Output ONLY the improved code, preserving EVERY SINGLE existing functionality.`;
             if (match && match[1])
               enhancedCode = match[1].trim();
           }
+
+          // Ensure there's exactly one empty line at the end
+          enhancedCode = enhancedCode.trimEnd() + '\n\n';
 
           processedActionCache.set(actionKey, enhancedCode);
           debugLog(`[Performance] Cached result for ${action.name} action (${Date.now() - startTime}ms)`);
